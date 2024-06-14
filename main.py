@@ -7,7 +7,7 @@ from OpenGL.GLUT import *
 class UI_Config:
     def __init__(self):
         # Window size
-        self.win_w = 1280
+        self.win_w = 12801
         self.win_h = 720
         # Simulation Control
         self.step = False
