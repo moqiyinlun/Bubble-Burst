@@ -3,7 +3,7 @@ import numpy as np
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
-from SkyboxRenderer import SkyboxRender
+from SkyboxRenderer import *
 class UI_Config:
     def __init__(self):
         # Window size
@@ -41,7 +41,7 @@ def renderBitmapString(x, y, z, s):
     for i in range(len(s)):
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(s[i]))
 def display():
-    global config
+    global config,skybox
     glClearColor(1, 1, 1, 1)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glMatrixMode(GL_PROJECTION)
@@ -64,16 +64,8 @@ def display():
     glVertex3d(0, 0, 0)
     glVertex3d(0, 0, 2)
     glEnd()
-    # instead render 
-    vertices, normals, triangles = load_mesh()
-    glEnableClientState(GL_VERTEX_ARRAY)
-    glVertexPointer(3, GL_FLOAT, 0, vertices)
-    glEnableClientState(GL_NORMAL_ARRAY)
-    glNormalPointer(GL_FLOAT, 0, normals)
-    glDrawElements(GL_TRIANGLES, len(triangles) * 3, GL_UNSIGNED_INT, triangles)
-    glDisableClientState(GL_VERTEX_ARRAY)
-    glDisableClientState(GL_NORMAL_ARRAY)
-    # end instead render
+    # A = SkyboxRender("","textures/beach")
+    skybox.render()
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
     glOrtho(0, config.win_w, 0, config.win_h, -1, 1)
@@ -85,15 +77,14 @@ def display():
     glutSwapBuffers()
 
 def main():
-    global config
+    global config,skybox 
     config = UI_Config()
-
     glutInit()
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
     glutInitWindowSize(config.win_w, config.win_h)
     glutCreateWindow("PyOpenGL with Open3D and UI Config")
+    skybox = SkyboxRender("","textures/beach")
     glutDisplayFunc(display)
-    A = SkyboxRender("","textures/beach")
     glutMainLoop()
 
 if __name__ == "__main__":

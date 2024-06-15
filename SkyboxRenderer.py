@@ -182,7 +182,9 @@ class SkyboxRender:
             with Image.open(filename) as img:
                 img = img.convert("RGBA")  # Ensure the image is in RGBA format
                 data = np.array(img)  # Convert image to numpy array
-                data = data[::-1, :, :]  # Flip the image vertically
+                print(data.shape)
+
+                data = data[::-1, :, :] # Flip the image vertically
             # Bind the texture
             glBindTexture(GL_TEXTURE_CUBE_MAP, tex)
             # Load the image data into the cube map side
@@ -194,7 +196,7 @@ class SkyboxRender:
             return False
     def render(self):
         glActiveTexture(GL_TEXTURE0)
-        glBindTexture(GL_TEXTURE_CUBE_MAP, m_tex_env)
+        glBindTexture(GL_TEXTURE_CUBE_MAP, self.m_tex_env)
         glClearDepth(1.0)
         glClearColor(1.0, 1.0, 1.0, 1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -253,5 +255,18 @@ class SkyboxRender:
             10.0, -10.0,  10.0
         ], dtype=np.float32).reshape(-1, 3) 
         env_vb += cam_pos
-
+        env_vb = env_vb.reshape(-1)
         self.shader_env.activate()
+        glDisable(GL_DEPTH_TEST)
+        glDepthMask(GL_FALSE)
+        glCullFace(GL_FRONT_AND_BACK)
+        
+        glEnableVertexAttribArray(0)
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, env_vb)
+        glUniformMatrix4fv(self.shader_env.get_uniform_location("u_mat_mvp"), 1, GL_FALSE, mvp_matrix)
+        self.shader_env.set_uniform("u_tex_env", 0)
+        self.shader_env.set_uniform("u_camera_pos", cam_pos)
+        
+        glDrawArrays(GL_TRIANGLES, 0, 36)
+        
+        self.shader_env.deactivate()

@@ -21,12 +21,12 @@ class SZH_shader:
         self.vertex_attributes = {}
     def activate(self):
         glUseProgram(self.program)
-        Shader._current_shader = self
+        SZH_shader._current_shader = self
 
     @staticmethod
     def deactivate():
         glUseProgram(0)
-        Shader._current_shader = None
+        SZH_shader._current_shader = None
     def loadFromCode(self,vs_code,fs_code,attribute_list):
         vs = glCreateShader(GL_VERTEX_SHADER)
         fs = glCreateShader(GL_FRAGMENT_SHADER)
