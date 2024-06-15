@@ -3,7 +3,7 @@ import numpy as np
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
-
+from SkyboxRenderer import SkyboxRender
 class UI_Config:
     def __init__(self):
         # Window size
@@ -93,6 +93,7 @@ def main():
     glutInitWindowSize(config.win_w, config.win_h)
     glutCreateWindow("PyOpenGL with Open3D and UI Config")
     glutDisplayFunc(display)
+    A = SkyboxRender("","textures/beach")
     glutMainLoop()
 
 if __name__ == "__main__":

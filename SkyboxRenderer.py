@@ -4,15 +4,30 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
 from OpenGL.GL import shaders
+from Shader import SZH_shader as sshader
 from PIL import Image
 import os 
-
+def check_shader_errors(shader, shader_type):
+    status = glGetShaderiv(shader, GL_COMPILE_STATUS)
+    if not status:
+        info_log = glGetShaderInfoLog(shader)
+        print(f"Compile {shader_type} error: {info_log}")
+        return False
+    return True
+class MyDefinedMesh:
+    def __init__(self,data_path,name):
+        obj_path = os.path.join(data_path,"{}.obj")
+        self.obj = o3d.io.read_triangle_mesh(obj_path)
+        self.label_path = os.path.join(data_path,"{}_flabel.txt")
+    def create_label_list(self):
+        # with open(self.label_path,"w") as f:
+        #     f.read()
 class SkyboxRender:
     def __init__(self, mesh, env_map):
         self.mesh = mesh
         self.env_map = env_map
         self.m_tex_env = 0
-        self.shader_bubble = glCreateProgram()
+        self.shader_bubble = sshader()
         # compile vertex shader and fragment shader 
         vertex_shader_code = """
         attribute vec4 a_position;
@@ -75,17 +90,32 @@ class SkyboxRender:
 
         }
         """
-        bubble_vertex = shaders.compileShader(vertex_shader_code, GL_VERTEX_SHADER) 
-        bubble_fragment = shaders.compileShader(fragment_shader_code, GL_FRAGMENT_SHADER)
-        glAttachShader(self.shader_bubble, bubble_vertex)
-        glAttachShader(self.shader_bubble, bubble_fragment)
-        glBindAttribLocation(self.shader_bubble, 0, 'a_position')
-        glBindAttribLocation(self.shader_bubble, 1, 'a_normal')
+        vs = glCreateShader(GL_VERTEX_SHADER)
+        fs = glCreateShader(GL_FRAGMENT_SHADER)
+        glShaderSource(vs,vertex_shader_code)
+        glShaderSource(fs,fragment_shader_code)
+        glCompileShader(vs)
+        glCompileShader(fs)
+        if not check_shader_errors(vs, "vertex shader"):
+            return
+        if not check_shader_errors(fs, "fragment shader"):
+            return
+        glAttachShader(self.shader_bubble.program, vs)
+        glAttachShader(self.shader_bubble.program, fs)
+        glBindAttribLocation(self.shader_bubble.program, 0, 'a_position')
+        glBindAttribLocation(self.shader_bubble.program, 1, 'a_normal')
         # Link the program
-        glLinkProgram(self.shader_bubble)
-        glValidateProgram(self.shader_bubble)
+        glLinkProgram(self.shader_bubble.program)
+        link_status = glGetProgramiv(self.shader_bubble.program, GL_LINK_STATUS)
+        if not link_status:
+            info_log = glGetProgramInfoLog(self.shader_bubble.program)
+            print(info_log)
+            print(f"Link error: {info_log}")
+        else:
+            print("Link success")
+        self.create_cube_map()
     def create_cube_map(self):
-        if not self.env_map_path:
+        if not self.env_map:
             return False
 
         # Generate a cube-map texture to hold all the sides
@@ -104,7 +134,7 @@ class SkyboxRender:
 
         # Load each image and copy it into a side of the cube-map texture
         for target, suffix in sides:
-            image_path = f"{self.env_map_path}_{suffix}"
+            image_path = f"{self.env_map}_{suffix}"
             if not self.load_cube_map_side(self.m_tex_env,target, image_path):
                 return False
 
@@ -116,7 +146,7 @@ class SkyboxRender:
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
 
         return True
-    def load_cube_map_side(tex, side, filename):
+    def load_cube_map_side(self, tex, side, filename):
         try:
             with Image.open(filename) as img:
                 img = img.convert("RGBA")  # Ensure the image is in RGBA format
