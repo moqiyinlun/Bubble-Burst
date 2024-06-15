@@ -7,7 +7,7 @@ from OpenGL.GLUT import *
 class UI_Config:
     def __init__(self):
         # Window size
-        self.win_w = 12801
+        self.win_w = 1280
         self.win_h = 720
         # Simulation Control
         self.step = False
@@ -28,7 +28,6 @@ class UI_Config:
         self.rdrag_start_y = 0
 
 def load_mesh():
-    # 读取.obj文件
     mesh = o3d.io.read_triangle_mesh("assets/sample_mesh/6bubbles.obj")
     vertices = np.asarray(mesh.vertices)
     if not mesh.has_triangle_normals():
@@ -36,25 +35,24 @@ def load_mesh():
     normals = np.asarray(mesh.triangle_normals)
     triangles = np.asarray(mesh.triangles)
     return vertices, normals, triangles
-
+def renderBitmapString(x, y, z, s):
+    glColor3f(0, 0, 0)
+    glRasterPos3f(x, y, z)
+    for i in range(len(s)):
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(s[i]))
 def display():
     global config
     glClearColor(1, 1, 1, 1)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
-    # 设置投影矩阵
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
     gluPerspective(45, float(config.win_w) / float(config.win_h), 0.001, 50)
-
-    # 设置模型视图矩阵
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
     gluLookAt(0, -config.view_dist, 0, 0, 0, 0, 0, 0, 1)
     glRotated(config.view_alpha, 1, 0, 0)
     glRotated(config.view_theta, 0, 0, 1)
 
-    # 绘制坐标轴
     glBegin(GL_LINES)
     glColor3d(1, 0, 0)
     glVertex3d(0, 0, 0)
@@ -66,8 +64,7 @@ def display():
     glVertex3d(0, 0, 0)
     glVertex3d(0, 0, 2)
     glEnd()
-
-    # 绘制模型
+    # instead render 
     vertices, normals, triangles = load_mesh()
     glEnableClientState(GL_VERTEX_ARRAY)
     glVertexPointer(3, GL_FLOAT, 0, vertices)
@@ -76,8 +73,15 @@ def display():
     glDrawElements(GL_TRIANGLES, len(triangles) * 3, GL_UNSIGNED_INT, triangles)
     glDisableClientState(GL_VERTEX_ARRAY)
     glDisableClientState(GL_NORMAL_ARRAY)
-
-    # 交换缓冲区
+    # end instead render
+    glMatrixMode(GL_PROJECTION)
+    glLoadIdentity()
+    glOrtho(0, config.win_w, 0, config.win_h, -1, 1)
+    glMatrixMode(GL_MODELVIEW)
+    glLoadIdentity()
+    
+    renderBitmapString(20, config.win_h - 20, 0, "T = 0")
+    
     glutSwapBuffers()
 
 def main():
