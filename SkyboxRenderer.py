@@ -16,20 +16,41 @@ def check_shader_errors(shader, shader_type):
     return True
 class MyDefinedMesh:
     def __init__(self,data_path,name):
-        obj_path = os.path.join(data_path,"{}.obj")
+        obj_path = os.path.join(data_path,"{}.obj".format(name))
         self.obj = o3d.io.read_triangle_mesh(obj_path)
-        self.label_path = os.path.join(data_path,"{}_flabel.txt")
+        self.label_path = os.path.join(data_path,"{}_flabel.txt".format(name))
+        print(self.label_path)
+        self.labels = []
+        self.create_label_list()
+        print(self.labels)
     def create_label_list(self):
+        try:
+            with open(self.label_path, "r") as file:
+                lines = file.readlines()
+                n_faces = int(lines[1].strip())  
+                if n_faces != len(self.obj.triangles):
+                    raise ValueError("Number of labels does not match number of faces")
+                for line in lines[2:]:
+                    parts = line.strip().split()
+                    if len(parts) < 2:
+                        continue  
+                    label1 = int(parts[0])
+                    label2 = int(parts[1])
+                    self.labels.append((label1, label2))
+        except Exception as e:
+            print("Label file not found: {}".format(self.label_path))
+            self.labels = [(1, 0) for _ in range(len(self.obj.triangles))]
         # with open(self.label_path,"w") as f:
         #     f.read()
 class SkyboxRender:
     def __init__(self, mesh, env_map):
-        self.mesh = mesh
+        self.mesh = MyDefinedMesh("assets/sample_mesh","6bubbles")
         self.env_map = env_map
         self.m_tex_env = 0
         self.shader_bubble = sshader()
+        self.shader_env = sshader()
         # compile vertex shader and fragment shader 
-        vertex_shader_code = """
+        bubble_vertex_shader_code = """
         attribute vec4 a_position;
         attribute vec3 a_normal;
 
@@ -47,7 +68,7 @@ class SkyboxRender:
             gl_Position = u_mat_mvp * a_position;
         }
         """
-        fragment_shader_code = """ 
+        bubble_fragment_shader_code = """ 
         uniform sampler2D u_tex_depth;
         uniform samplerCube u_tex_env;
 
@@ -90,29 +111,39 @@ class SkyboxRender:
 
         }
         """
-        vs = glCreateShader(GL_VERTEX_SHADER)
-        fs = glCreateShader(GL_FRAGMENT_SHADER)
-        glShaderSource(vs,vertex_shader_code)
-        glShaderSource(fs,fragment_shader_code)
-        glCompileShader(vs)
-        glCompileShader(fs)
-        if not check_shader_errors(vs, "vertex shader"):
-            return
-        if not check_shader_errors(fs, "fragment shader"):
-            return
-        glAttachShader(self.shader_bubble.program, vs)
-        glAttachShader(self.shader_bubble.program, fs)
-        glBindAttribLocation(self.shader_bubble.program, 0, 'a_position')
-        glBindAttribLocation(self.shader_bubble.program, 1, 'a_normal')
-        # Link the program
-        glLinkProgram(self.shader_bubble.program)
-        link_status = glGetProgramiv(self.shader_bubble.program, GL_LINK_STATUS)
-        if not link_status:
-            info_log = glGetProgramInfoLog(self.shader_bubble.program)
-            print(info_log)
-            print(f"Link error: {info_log}")
-        else:
-            print("Link success")
+        env_vertex_shader = """
+            attribute vec4 a_position;
+
+            uniform mat4 u_mat_mvp;
+
+            varying vec4 v_position_world;
+
+            void main()
+            {
+                v_position_world = a_position;
+                
+                gl_Position = u_mat_mvp * a_position;
+            }
+        """
+        env_fragment_shader = """
+            uniform samplerCube u_tex_env;
+
+            uniform mat4 u_mat_mvp;
+            uniform vec3 u_camera_pos;
+
+            varying vec4 v_position_world;
+
+            void main()
+            {
+                vec3 viewvec = v_position_world.xyz / v_position_world.w - u_camera_pos;
+                gl_FragColor = textureCube(u_tex_env, viewvec);
+                
+            }
+        """
+        bubble_attribute_list = ["a_position","a_normal"]
+        env_attribute_list = ["a_position"]
+        self.shader_bubble.loadFromCode(bubble_vertex_shader_code,bubble_fragment_shader_code,bubble_attribute_list)
+        self.shader_env.loadFromCode(env_vertex_shader,env_fragment_shader,env_attribute_list)
         self.create_cube_map()
     def create_cube_map(self):
         if not self.env_map:
@@ -161,3 +192,66 @@ class SkyboxRender:
         except Exception as e:
             print(f"An error occurred while loading {filename}: {e}")
             return False
+    def render(self):
+        glActiveTexture(GL_TEXTURE0)
+        glBindTexture(GL_TEXTURE_CUBE_MAP, m_tex_env)
+        glClearDepth(1.0)
+        glClearColor(1.0, 1.0, 1.0, 1.0)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        mv = glGetFloatv(GL_MODELVIEW_MATRIX)
+        pj = glGetFloatv(GL_PROJECTION_MATRIX)
+        mv_matrix = np.transpose(np.array(mv, dtype=np.float32).reshape(4, 4))
+        pj_matrix = np.transpose(np.array(pj, dtype=np.float32).reshape(4, 4))
+        mvp_matrix = np.dot(pj_matrix, mv_matrix)
+
+        # Camera position from the inverted modelview matrix
+        inv_mv_matrix = np.linalg.inv(mv_matrix)
+        cam_pos_h = np.dot(inv_mv_matrix, np.array([0.0, 0.0, 1.0, 1.0]))
+        cam_pos_h /= cam_pos_h[3]
+        cam_pos = cam_pos_h[:3]
+        env_vb = np.array([
+            -10.0,  10.0, -10.0,
+            -10.0, -10.0, -10.0,
+            10.0, -10.0, -10.0,
+            10.0, -10.0, -10.0,
+            10.0,  10.0, -10.0,
+            -10.0,  10.0, -10.0,
+            
+            -10.0, -10.0,  10.0,
+            -10.0, -10.0, -10.0,
+            -10.0,  10.0, -10.0,
+            -10.0,  10.0, -10.0,
+            -10.0,  10.0,  10.0,
+            -10.0, -10.0,  10.0,
+            
+            10.0, -10.0, -10.0,
+            10.0, -10.0,  10.0,
+            10.0,  10.0,  10.0,
+            10.0,  10.0,  10.0,
+            10.0,  10.0, -10.0,
+            10.0, -10.0, -10.0,
+            
+            -10.0, -10.0,  10.0,
+            -10.0,  10.0,  10.0,
+            10.0,  10.0,  10.0,
+            10.0,  10.0,  10.0,
+            10.0, -10.0,  10.0,
+            -10.0, -10.0,  10.0,
+            
+            -10.0,  10.0, -10.0,
+            10.0,  10.0, -10.0,
+            10.0,  10.0,  10.0,
+            10.0,  10.0,  10.0,
+            -10.0,  10.0,  10.0,
+            -10.0,  10.0, -10.0,
+            
+            -10.0, -10.0, -10.0,
+            -10.0, -10.0,  10.0,
+            10.0, -10.0, -10.0,
+            10.0, -10.0, -10.0,
+            -10.0, -10.0,  10.0,
+            10.0, -10.0,  10.0
+        ], dtype=np.float32).reshape(-1, 3) 
+        env_vb += cam_pos
+
+        self.shader_env.activate()

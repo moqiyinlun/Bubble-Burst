@@ -1,6 +1,13 @@
 import os
 from OpenGL.GL import *
 from OpenGL.GL.shaders import compileProgram, compileShader
+def check_shader_errors(shader, shader_type):
+    status = glGetShaderiv(shader, GL_COMPILE_STATUS)
+    if not status:
+        info_log = glGetShaderInfoLog(shader)
+        print(f"Compile {shader_type} error: {info_log}")
+        return False
+    return True
 class SZH_shader:
     _current_shader = None
 
@@ -20,7 +27,31 @@ class SZH_shader:
     def deactivate():
         glUseProgram(0)
         Shader._current_shader = None
+    def loadFromCode(self,vs_code,fs_code,attribute_list):
+        vs = glCreateShader(GL_VERTEX_SHADER)
+        fs = glCreateShader(GL_FRAGMENT_SHADER)
+        glShaderSource(vs,vs_code)
+        glShaderSource(fs,fs_code)
+        glCompileShader(vs)
+        glCompileShader(fs)
+        if not check_shader_errors(vs, "vertex shader"):
+            return
+        if not check_shader_errors(fs, "fragment shader"):
+            return
+        glAttachShader(self.program, vs)
+        glAttachShader(self.program, fs)
+        for i in range(len(attribute_list)):
 
+            glBindAttribLocation(self.program, i, attribute_list[i])
+        # Link the program
+        glLinkProgram(self.program)
+        link_status = glGetProgramiv(self.program, GL_LINK_STATUS)
+        if not link_status:
+            info_log = glGetProgramInfoLog(self.program)
+            print(info_log)
+            print(f"Link error: {info_log}")
+        else:
+            print("Link success")
     def set_uniform(self, name, value):
         location = self.get_uniform_location(name)
         if isinstance(value, int):
