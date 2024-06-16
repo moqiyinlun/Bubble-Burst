@@ -63,9 +63,9 @@ class SZH_shader:
         elif isinstance(value, tuple) and len(value) == 4:
             glUniform4f(location, *value)
         elif isinstance(value, list) and len(value[0]) == 3:
-            glUniform3fv(location, len(value), [x for vec in value for x in vec])
+            glUniform3fv(location, 1, GL_FALSE, [x for vec in value for x in vec])
         elif isinstance(value, list) and len(value[0]) == 4:
-            glUniform4fv(location, len(value), [x for vec in value for x in vec])
+            glUniform4fv(location, 1, GL_FALSE, [x for vec in value for x in vec])
 
     def get_uniform_location(self, name):
         if name in self.uniform_locations:

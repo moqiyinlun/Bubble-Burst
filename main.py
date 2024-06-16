@@ -66,6 +66,13 @@ def display():
     glEnd()
     # A = SkyboxRender("","textures/beach")
     skybox.render()
+    # vertices, normals, triangles = load_mesh()
+    # glEnableClientState(GL_VERTEX_ARRAY)
+    # glVertexPointer(3, GL_FLOAT, 0, vertices)
+    # glEnableClientState(GL_NORMAL_ARRAY)
+    # glNormalPointer(GL_FLOAT, 0, normals)
+    # glDrawElements(GL_TRIANGLES, len(triangles) * 3, GL_UNSIGNED_INT, triangles)
+
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
     glOrtho(0, config.win_w, 0, config.win_h, -1, 1)

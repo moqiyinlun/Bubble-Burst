@@ -136,7 +136,7 @@ class SkyboxRender:
             void main()
             {
                 vec3 viewvec = v_position_world.xyz / v_position_world.w - u_camera_pos;
-                gl_FragColor = textureCube(u_tex_env, viewvec);
+                gl_FragColor =  textureCube(u_tex_env, viewvec);
                 
             }
         """
@@ -145,73 +145,11 @@ class SkyboxRender:
         self.shader_bubble.loadFromCode(bubble_vertex_shader_code,bubble_fragment_shader_code,bubble_attribute_list)
         self.shader_env.loadFromCode(env_vertex_shader,env_fragment_shader,env_attribute_list)
         self.create_cube_map()
-    def create_cube_map(self):
-        if not self.env_map:
-            return False
-
-        # Generate a cube-map texture to hold all the sides
-        glActiveTexture(GL_TEXTURE0)
-        self.m_tex_env = glGenTextures(1)
-        glBindTexture(GL_TEXTURE_CUBE_MAP, self.m_tex_env)
-
-        sides = [
-            (GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 'bottom.png'),
-            (GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 'top.png'),
-            (GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 'front.png'),
-            (GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 'back.png'),
-            (GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 'left.png'),
-            (GL_TEXTURE_CUBE_MAP_POSITIVE_X, 'right.png')
-        ]
-
-        # Load each image and copy it into a side of the cube-map texture
-        for target, suffix in sides:
-            image_path = f"{self.env_map}_{suffix}"
-            if not self.load_cube_map_side(self.m_tex_env,target, image_path):
-                return False
-
-        # Set texture parameters
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE)
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
-
-        return True
-    def load_cube_map_side(self, tex, side, filename):
-        try:
-            with Image.open(filename) as img:
-                img = img.convert("RGBA")  # Ensure the image is in RGBA format
-                data = np.array(img)  # Convert image to numpy array
-                print(data.shape)
-
-                data = data[::-1, :, :] # Flip the image vertically
-            # Bind the texture
-            glBindTexture(GL_TEXTURE_CUBE_MAP, tex)
-            # Load the image data into the cube map side
-            glTexImage2D(side, 0, GL_RGBA, img.width, img.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data)
-            
-            return True
-        except Exception as e:
-            print(f"An error occurred while loading {filename}: {e}")
-            return False
-    def render(self):
-        glActiveTexture(GL_TEXTURE0)
-        glBindTexture(GL_TEXTURE_CUBE_MAP, self.m_tex_env)
-        glClearDepth(1.0)
-        glClearColor(1.0, 1.0, 1.0, 1.0)
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        mv = glGetFloatv(GL_MODELVIEW_MATRIX)
-        pj = glGetFloatv(GL_PROJECTION_MATRIX)
-        mv_matrix = np.transpose(np.array(mv, dtype=np.float32).reshape(4, 4))
-        pj_matrix = np.transpose(np.array(pj, dtype=np.float32).reshape(4, 4))
-        mvp_matrix = np.dot(pj_matrix, mv_matrix)
-
-        # Camera position from the inverted modelview matrix
-        inv_mv_matrix = np.linalg.inv(mv_matrix)
-        cam_pos_h = np.dot(inv_mv_matrix, np.array([0.0, 0.0, 1.0, 1.0]))
-        cam_pos_h /= cam_pos_h[3]
-        cam_pos = cam_pos_h[:3]
-        env_vb = np.array([
+        self.vao = glGenVertexArrays(1)
+        self.vbo = glGenBuffers(1)
+        glBindVertexArray(self.vao)
+        glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
+        self.env_vb = np.array([
             -10.0,  10.0, -10.0,
             -10.0, -10.0, -10.0,
             10.0, -10.0, -10.0,
@@ -253,20 +191,86 @@ class SkyboxRender:
             10.0, -10.0, -10.0,
             -10.0, -10.0,  10.0,
             10.0, -10.0,  10.0
-        ], dtype=np.float32).reshape(-1, 3) 
-        env_vb += cam_pos
-        env_vb = env_vb.reshape(-1)
-        self.shader_env.activate()
-        glDisable(GL_DEPTH_TEST)
-        glDepthMask(GL_FALSE)
-        glCullFace(GL_FRONT_AND_BACK)
+        ], dtype=np.float32)
         
+    def create_cube_map(self):
+        if not self.env_map:
+            return False
+
+        glActiveTexture(GL_TEXTURE0)
+        self.m_tex_env = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_CUBE_MAP, self.m_tex_env)
+        sides = [
+            (GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 'bottom.png'),
+            (GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 'top.png'),
+            (GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 'front.png'),
+            (GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 'back.png'),
+            (GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 'left.png'),
+            (GL_TEXTURE_CUBE_MAP_POSITIVE_X, 'right.png')
+        ]
+
+        for target, suffix in sides:
+            image_path = f"{self.env_map}_{suffix}"
+            try:
+                img = Image.open(image_path)
+                img_data = np.array(list(img.getdata()), np.uint8) # 图片数据
+                img_data = img_data.reshape((img.size[1], img.size[0], 4)) # 根据图片尺寸调整形状
+                img_data = np.flip(img_data, axis=0) # 垂直翻转图像
+                glTexImage2D(target, 0, GL_RGBA, img.size[0], img.size[1], 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data)
+            except Exception as e:
+                print(f"An error occurred while loading {image_path}: {e}")
+                return False
+
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE)
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+
+        return True
+    def render(self):
+        glActiveTexture(GL_TEXTURE0)
+        glBindTexture(GL_TEXTURE_CUBE_MAP, self.m_tex_env)
+        glClearDepth(1.0)
+        glClearColor(1.0, 1.0, 1.0, 1.0)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        mv = glGetFloatv(GL_MODELVIEW_MATRIX)
+        pj = glGetFloatv(GL_PROJECTION_MATRIX)
+        mv_matrix = np.transpose(np.array(mv, dtype=np.float32).reshape(4, 4))
+        pj_matrix = np.transpose(np.array(pj, dtype=np.float32).reshape(4, 4))
+        mvp_matrix = np.dot(pj_matrix, mv_matrix)
+
+        # Camera position from the inverted modelview matrix
+        inv_mv_matrix = np.linalg.inv(mv_matrix)
+        cam_pos_h = np.dot(inv_mv_matrix, np.array([0.0, 0.0, 1.0, 1.0]))
+        cam_pos_h /= cam_pos_h[3]
+        cam_pos = cam_pos_h[:3]
+        
+        for i in range(36):
+            self.env_vb[i*3 + 0] += cam_pos[0]
+            self.env_vb[i*3 + 1] += cam_pos[1]
+            self.env_vb[i*3 + 2] += cam_pos[2]
+        glBufferData(GL_ARRAY_BUFFER, self.env_vb.nbytes, self.env_vb, GL_STATIC_DRAW)
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, None)
         glEnableVertexAttribArray(0)
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, env_vb)
-        glUniformMatrix4fv(self.shader_env.get_uniform_location("u_mat_mvp"), 1, GL_FALSE, mvp_matrix)
+        
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        glBindVertexArray(0)
+        self.shader_env.activate()
+        mvp_location = glGetUniformLocation(self.shader_env.program, "u_mat_mvp")
+        if mvp_location == -1:
+            print("Failed to get uniform location for 'u_mat_mvp'")
+            return
+
+        glUniformMatrix4fv(mvp_location, 1, GL_FALSE, mvp_matrix)
         self.shader_env.set_uniform("u_tex_env", 0)
         self.shader_env.set_uniform("u_camera_pos", cam_pos)
-        
+
+        glBindVertexArray(self.vao)
         glDrawArrays(GL_TRIANGLES, 0, 36)
-        
+        glBindVertexArray(0)
         self.shader_env.deactivate()
+        face_ordering = []
+        # print(len(self.mesh.obj))
+        # for i in range()
+        
