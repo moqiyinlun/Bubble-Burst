@@ -264,7 +264,8 @@ class SkyboxRender:
         glCullFace(GL_FRONT_AND_BACK)
         glEnableVertexAttribArray(0)
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, env_vb)
-        glUniformMatrix4fv(self.shader_env.get_uniform_location("u_mat_mvp"), 1, GL_FALSE, mvp_matrix)
+        # row main index 
+        glUniformMatrix4fv(self.shader_env.get_uniform_location("u_mat_mvp"), 1, GL_FALSE, mvp_matrix.T)
         self.shader_env.set_uniform("u_tex_env", 0)
         self.shader_env.set_uniform("u_camera_pos", [cam_pos[0],cam_pos[1],cam_pos[2]])
         
@@ -272,5 +273,7 @@ class SkyboxRender:
         
         self.shader_env.deactivate()
         face_ordering = []
+        print(len(self.mesh.obj.triangles))
+        # for i in range()
         # for i in range
         
