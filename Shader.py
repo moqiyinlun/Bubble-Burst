@@ -58,9 +58,10 @@ class SZH_shader:
             glUniform1i(location, value)
         elif isinstance(value, float):
             glUniform1f(location, value)
-        elif isinstance(value, tuple) and len(value) == 3:
-            glUniform3f(location, *value)
-        elif isinstance(value, tuple) and len(value) == 4:
+        elif isinstance(value, list) and len(value) == 3:
+            print("This is glUniform3f!")
+            glUniform3f(location, value[0],value[1],value[2])
+        elif isinstance(value, list) and len(value) == 4:
             glUniform4f(location, *value)
         elif isinstance(value, list) and len(value[0]) == 3:
             glUniform3fv(location, 1, GL_FALSE, [x for vec in value for x in vec])
