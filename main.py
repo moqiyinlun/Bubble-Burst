@@ -64,7 +64,6 @@ def display():
     glVertex3d(0, 0, 0)
     glVertex3d(0, 0, 2)
     glEnd()
-    # A = SkyboxRender("","textures/beach")
     skybox.render()
     # vertices, normals, triangles = load_mesh()
     # glEnableClientState(GL_VERTEX_ARRAY)
@@ -82,7 +81,48 @@ def display():
     renderBitmapString(20, config.win_h - 20, 0, "T = 0")
     
     glutSwapBuffers()
+def motion(x, y):
+    global config 
+    if config.ldrag:
+        config.view_theta += (x - config.ldrag_start_x) * 1.0
+        config.view_alpha += (y - config.ldrag_start_y) * 1.0
 
+        config.ldrag_start_x = x
+        config.ldrag_start_y = y
+
+    if config.rdrag:
+        config.view_dist *= math.pow(2.0, (y - config.rdrag_start_y) * 0.01)
+
+        config.rdrag_start_x = x
+        config.rdrag_start_y = y
+
+    config.mouse_x = x
+    config.mouse_y = y
+
+    glutPostRedisplay()
+def movement(x,y):
+    config.mouse_x = x
+    config.mouse_y = y
+def mouse(button, state, x, y):
+    global config 
+
+    if button == GLUT_LEFT_BUTTON:
+        if state == GLUT_DOWN:
+            config.ldrag = True
+            config.ldrag_start_x = x
+            config.ldrag_start_y = y
+        elif state == GLUT_UP:
+            config.ldrag = False
+
+    elif button == GLUT_RIGHT_BUTTON:
+        if state == GLUT_DOWN:
+            config.rdrag = True
+            config.rdrag_start_x = x
+            config.rdrag_start_y = y
+        elif state == GLUT_UP:
+            config.rdrag = False
+
+    glutPostRedisplay() 
 def main():
     global config,skybox 
     config = UI_Config()
@@ -90,9 +130,11 @@ def main():
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
     glutInitWindowSize(config.win_w, config.win_h)
     glutCreateWindow("PyOpenGL with Open3D and UI Config")
-    skybox = SkyboxRender("","textures/beach")
+    glutMouseFunc(mouse)
+    glutMotionFunc(motion)
+    glutPassiveMotionFunc(movement)
+    skybox = SkyboxRender(MyDefinedMesh("assets/sample_mesh","6bubbles"),"textures/beach")
     glutDisplayFunc(display)
     glutMainLoop()
-
 if __name__ == "__main__":
     main()

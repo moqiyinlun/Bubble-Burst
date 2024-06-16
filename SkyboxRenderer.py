@@ -58,7 +58,7 @@ class MyDefinedMesh:
 
 class SkyboxRender:
     def __init__(self, mesh, env_map):
-        self.mesh = MyDefinedMesh("assets/sample_mesh","6bubbles")
+        self.mesh = mesh #MyDefinedMesh("assets/sample_mesh","6bubbles")
         self.env_map = env_map
         self.m_tex_env = 0
         self.shader_bubble = sshader()
@@ -113,7 +113,7 @@ class SkyboxRender:
             vec3 halfway = normalize(viewvec + lightvec);
             vec4 shading_specular = u_light_specular * pow(clamp(dot(halfway, normal), 0.0, 1.0), u_light_specularity);
 
-            vec4 shading_ambient = vec4(0.3, 0.3, 0.3, 0.3);
+            vec4 shading_ambient = vec4(0.4, 0.3, 0.3, 0.3);
             
             vec3 reflectiondir = reflect(-viewvec, normal);
             vec4 reflection = textureCube(u_tex_env, reflectiondir);
@@ -196,7 +196,6 @@ class SkyboxRender:
             with Image.open(filename) as img:
                 img = img.convert("RGBA")  # Ensure the image is in RGBA format
                 data = np.array(img)  # Convert image to numpy array
-                print(data.shape)
 
                 data = data[::-1, :, :] # Flip the image vertically
             # Bind the texture
@@ -319,12 +318,8 @@ class SkyboxRender:
         glUniform1f(self.shader_bubble.get_uniform_location("u_light_specularity"), 120)
         self.shader_bubble.set_uniform("u_tex_env", 0)
         glDrawArrays(GL_TRIANGLES, 0, len(face_ordering) * 3)
-        
         self.shader_bubble.deactivate()
-        
         glEnable(GL_DEPTH_TEST)
         glDepthMask(GL_TRUE)
         glDisable(GL_BLEND)
-        # for i in range()
-        # for i in range
         
