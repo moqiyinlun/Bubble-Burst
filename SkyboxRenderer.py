@@ -19,10 +19,12 @@ class MyDefinedMesh:
         obj_path = os.path.join(data_path,"{}.obj".format(name))
         self.obj = o3d.io.read_triangle_mesh(obj_path)
         self.label_path = os.path.join(data_path,"{}_flabel.txt".format(name))
-        print(self.label_path)
+        # print(self.label_path)
+        self.vertex_normals = None
         self.labels = []
         self.create_label_list()
-        print(self.labels)
+        # print(self.labels)
+        self.compute_vertex_normals()
     def create_label_list(self):
         try:
             with open(self.label_path, "r") as file:
@@ -42,6 +44,18 @@ class MyDefinedMesh:
             self.labels = [(1, 0) for _ in range(len(self.obj.triangles))]
         # with open(self.label_path,"w") as f:
         #     f.read()
+    def sort_triangles(self, cam_pos):
+        vertices = np.asarray(self.obj.vertices)
+        triangles = np.asarray(self.obj.triangles)
+        centers = vertices[triangles].mean(axis=1)
+        depths = np.dot(centers - cam_pos, cam_pos)
+        sorted_indices = np.argsort(depths)[::-1]  # Sort from farthest to nearest
+        return sorted_indices
+    def compute_vertex_normals(self):
+        if not self.obj.has_vertex_normals():
+            self.obj.compute_vertex_normals()
+        self.vertex_normals = np.asarray(self.obj.vertex_normals)
+
 class SkyboxRender:
     def __init__(self, mesh, env_map):
         self.mesh = MyDefinedMesh("assets/sample_mesh","6bubbles")
@@ -272,8 +286,45 @@ class SkyboxRender:
         glDrawArrays(GL_TRIANGLES, 0, 36)
         
         self.shader_env.deactivate()
-        face_ordering = []
-        print(len(self.mesh.obj.triangles))
+        # face_ordering = []
+        face_ordering = self.mesh.sort_triangles(cam_pos)
+        triangles = np.asarray(self.mesh.obj.triangles)[face_ordering]
+        vertex = np.asarray(self.mesh.obj.vertices)
+        normals = self.mesh.vertex_normals
+        vb = np.zeros((len(triangles) * 9), dtype=np.float32)
+        nb = np.zeros((len(triangles) * 9), dtype=np.float32)
+        for i,tri in enumerate(triangles):
+            for j in range(3):
+                vb[i*9 + j*3 : i*9 + (j+1) *3] = vertex[tri[j]]
+                nb[i*9 + j*3:i*9 + (j+1)*3] = normals[tri[j]]
+        self.shader_bubble.activate()
+    
+        glDisable(GL_DEPTH_TEST)
+        glDepthMask(GL_FALSE)
+        glCullFace(GL_FRONT_AND_BACK)
+        
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        
+        glEnableVertexAttribArray(0)
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, vb)
+        glEnableVertexAttribArray(1)
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nb)
+        self.shader_bubble.set_uniform("u_camera_pos", [cam_pos[0],cam_pos[1],cam_pos[2]])
+        glUniformMatrix4fv(self.shader_bubble.get_uniform_location("u_mat_mvp"), 1, GL_FALSE, mvp_matrix.T)
+        glUniform3f(self.shader_bubble.get_uniform_location("u_light_direction"), 0.26726124191, 0.53452248382, -0.80178372573)
+        glUniform4f(self.shader_bubble.get_uniform_location("u_light_ambient"), 0.3, 0.3, 0.3, 1)
+        glUniform4f(self.shader_bubble.get_uniform_location("u_light_diffuse"), 1, 1, 1, 1)
+        glUniform4f(self.shader_bubble.get_uniform_location("u_light_specular"), 1, 1, 1, 1)
+        glUniform1f(self.shader_bubble.get_uniform_location("u_light_specularity"), 120)
+        self.shader_bubble.set_uniform("u_tex_env", 0)
+        glDrawArrays(GL_TRIANGLES, 0, len(face_ordering) * 3)
+        
+        self.shader_bubble.deactivate()
+        
+        glEnable(GL_DEPTH_TEST)
+        glDepthMask(GL_TRUE)
+        glDisable(GL_BLEND)
         # for i in range()
         # for i in range
         
