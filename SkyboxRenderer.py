@@ -14,6 +14,16 @@ def check_shader_errors(shader, shader_type):
         print(f"Compile {shader_type} error: {info_log}")
         return False
     return True
+class FluidSimulation:
+    def __init__(self,data_path,name,env_map):
+        # pass 
+        self.mesh = MyDefinedMesh(data_path,name)
+        # SkyboxRender
+        self.renderer = SkyboxRender(self.mesh,env_map)
+    def render(self):
+        self.renderer.render()
+    def step(self):
+        pass 
 class MyDefinedMesh:
     def __init__(self,data_path,name):
         obj_path = os.path.join(data_path,"{}.obj".format(name))

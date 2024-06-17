@@ -41,7 +41,7 @@ def renderBitmapString(x, y, z, s):
     for i in range(len(s)):
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(s[i]))
 def display():
-    global config,skybox
+    global config,simulator
     glClearColor(1, 1, 1, 1)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glMatrixMode(GL_PROJECTION)
@@ -64,7 +64,7 @@ def display():
     glVertex3d(0, 0, 0)
     glVertex3d(0, 0, 2)
     glEnd()
-    skybox.render()
+    simulator.render()
     # vertices, normals, triangles = load_mesh()
     # glEnableClientState(GL_VERTEX_ARRAY)
     # glVertexPointer(3, GL_FLOAT, 0, vertices)
@@ -105,7 +105,6 @@ def movement(x,y):
     config.mouse_y = y
 def mouse(button, state, x, y):
     global config 
-
     if button == GLUT_LEFT_BUTTON:
         if state == GLUT_DOWN:
             config.ldrag = True
@@ -124,7 +123,7 @@ def mouse(button, state, x, y):
 
     glutPostRedisplay() 
 def main():
-    global config,skybox 
+    global config,simulator 
     config = UI_Config()
     glutInit()
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
@@ -133,7 +132,7 @@ def main():
     glutMouseFunc(mouse)
     glutMotionFunc(motion)
     glutPassiveMotionFunc(movement)
-    skybox = SkyboxRender(MyDefinedMesh("assets/sample_mesh","6bubbles"),"textures/beach")
+    simulator = FluidSimulation("assets/sample_mesh","6bubbles","textures/beach")
     glutDisplayFunc(display)
     glutMainLoop()
 if __name__ == "__main__":
