@@ -1081,13 +1081,13 @@ void SZHSolver::computeDelta_d_n(const Eigen::MatrixXd &targetU,const Eigen::Mat
 }
 
 
-void SZHSolver::writeObj_FaceLabel_constrainedVertices(const bool with_imaginary_vertices){
+void SZHSolver::saveResult(const bool with_imaginary_vertices, const std::string & meshname,const std::string & labelname){
     
     const bool with_normal=false;
     const bool change_y_z=true;
-    MeshIO::saveOBJ(*this, "mesh.obj",with_imaginary_vertices,with_normal,change_y_z);
+    MeshIO::saveOBJ(*this, meshname,with_imaginary_vertices,with_normal,change_y_z);
 
-    std::string labelfile="flabel.txt";
+    std::string labelfile=labelname;
     std::ofstream ofs_flabel(labelfile);
     
     int nt=(int)mesh().nt();
@@ -1099,48 +1099,7 @@ void SZHSolver::writeObj_FaceLabel_constrainedVertices(const bool with_imaginary
         ofs_flabel<<label[0]<<" "<<label[1]<<std::endl;
     }
 
-    //Write constrained vertices
-    int nv_const=m_constrained_vertices.size();
-    
-    std::string constvertexfile="constvertex.txt";
-    std::ofstream ofs_constvertex(constvertexfile);
-    ofs_constvertex<<nv_const<<std::endl;
-    for(int i=0;i<nv_const;++i){
-        
-        ofs_constvertex<<m_constrained_vertices[i]<<std::endl;
-    }
 
-}
-
-void SZHSolver::write_constrained_mesh(std::string outputfile){
-    
-    if(Constrained_V.size()>0){
-        
-        Eigen::MatrixXd y_z_changed_Constrained_V(Constrained_V.rows(),3);
-        y_z_changed_Constrained_V<<Constrained_V.col(0),Constrained_V.col(2),Constrained_V.col(1);
-        
-        igl::writeOBJ(outputfile,y_z_changed_Constrained_V,Constrained_F);
-    }
-}
-
-void SZHSolver::write_film_mesh(std::string outputfile){
-    
-    MeshIO::saveOBJ(*this, outputfile,false,false,true);
-}
-
-void SZHSolver::write_mesh(){
-    static int count=0;
-
-    std::string output_directory="outputmesh/";
-    std::stringstream output_meshfile;
-    output_meshfile<<output_directory<<"output_mesh"<<std::setfill('0') << std::setw(6)<<count<<".obj";
-
-    std::stringstream constrained_meshfile;
-    constrained_meshfile<<output_directory<<"output_frame"<<std::setfill('0') << std::setw(6)<<count<<".obj";
-    
-    write_film_mesh(output_meshfile.str());
-    write_constrained_mesh(constrained_meshfile.str());
-    ++count;
 }
 
 

@@ -3,7 +3,8 @@ import numpy as np
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
-from SkyboxRenderer import *
+from SZHRenderer import *
+import math
 class UI_Config:
     def __init__(self):
         # Window size
@@ -26,20 +27,16 @@ class UI_Config:
         self.rdrag = False
         self.rdrag_start_x = 0
         self.rdrag_start_y = 0
-
-def load_mesh():
-    mesh = o3d.io.read_triangle_mesh("assets/sample_mesh/6bubbles.obj")
-    vertices = np.asarray(mesh.vertices)
-    if not mesh.has_triangle_normals():
-        mesh.compute_triangle_normals()
-    normals = np.asarray(mesh.triangle_normals)
-    triangles = np.asarray(mesh.triangles)
-    return vertices, normals, triangles
 def renderBitmapString(x, y, z, s):
     glColor3f(0, 0, 0)
     glRasterPos3f(x, y, z)
     for i in range(len(s)):
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(s[i]))
+def timer_callback(value):
+    global simulator
+    simulator.step()
+    glutPostRedisplay()
+    glutTimerFunc(100, timer_callback, 0)
 def display():
     global config,simulator
     glClearColor(1, 1, 1, 1)
@@ -128,12 +125,13 @@ def main():
     glutInit()
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
     glutInitWindowSize(config.win_w, config.win_h)
-    glutCreateWindow("PyOpenGL with Open3D and UI Config")
+    glutCreateWindow("SZHRenderer")
     glutMouseFunc(mouse)
     glutMotionFunc(motion)
     glutPassiveMotionFunc(movement)
-    simulator = FluidSimulation("assets/sample_mesh","6bubbles","textures/beach")
+    simulator = FluidSimulation("res",475,"textures/beach")
     glutDisplayFunc(display)
+    glutTimerFunc(100, timer_callback, 0) 
     glutMainLoop()
 if __name__ == "__main__":
     main()

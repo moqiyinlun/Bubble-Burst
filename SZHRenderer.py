@@ -15,20 +15,20 @@ def check_shader_errors(shader, shader_type):
         return False
     return True
 class FluidSimulation:
-    def __init__(self,data_path,name,env_map):
+    def __init__(self,data_path,time,env_map):
         # pass 
-        self.mesh = MyDefinedMesh(data_path,name)
+        self.mesh_list = [MyDefinedMesh(os.path.join(data_path,"mesh_{}.obj".format(i)),os.path.join(data_path,"label_{}.txt".format(i))) for i in range(time)]
         # SkyboxRender
-        self.renderer = SkyboxRender(self.mesh,env_map)
+        self.renderer = SZHRenderer(self.mesh_list,env_map)
     def render(self):
         self.renderer.render()
     def step(self):
-        pass 
+        # pass 
+        self.renderer.update_mesh()
 class MyDefinedMesh:
-    def __init__(self,data_path,name):
-        obj_path = os.path.join(data_path,"{}.obj".format(name))
+    def __init__(self,obj_path,label_path):
         self.obj = o3d.io.read_triangle_mesh(obj_path)
-        self.label_path = os.path.join(data_path,"{}_flabel.txt".format(name))
+        self.label_path = label_path
         # print(self.label_path)
         self.vertex_normals = None
         self.labels = []
@@ -66,9 +66,11 @@ class MyDefinedMesh:
             self.obj.compute_vertex_normals()
         self.vertex_normals = np.asarray(self.obj.vertex_normals)
 
-class SkyboxRender:
-    def __init__(self, mesh, env_map):
-        self.mesh = mesh #MyDefinedMesh("assets/sample_mesh","6bubbles")
+class SZHRenderer:
+    def __init__(self, mesh_list, env_map):
+        self.mesh_list = mesh_list 
+        self.mesh = None
+        self.index = 0
         self.env_map = env_map
         self.m_tex_env = 0
         self.shader_bubble = sshader()
@@ -217,6 +219,9 @@ class SkyboxRender:
         except Exception as e:
             print(f"An error occurred while loading {filename}: {e}")
             return False
+    def update_mesh(self):
+        self.index += 1
+        print(self.index)
     def render(self):
         glActiveTexture(GL_TEXTURE0)
         glBindTexture(GL_TEXTURE_CUBE_MAP, self.m_tex_env)
@@ -296,6 +301,7 @@ class SkyboxRender:
         
         self.shader_env.deactivate()
         # face_ordering = []
+        self.mesh = self.mesh_list[self.index]
         face_ordering = self.mesh.sort_triangles(cam_pos)
         triangles = np.asarray(self.mesh.obj.triangles)[face_ordering]
         vertex = np.asarray(self.mesh.obj.vertices)

@@ -74,7 +74,6 @@ protected:
     bool delta_dn_tq_juctions=true;
     int region_offset=1;//Offset for open regions
     int AIR;//Maximum index of open regions.
-    // Velocities of vertices
     LosTopos::NonDestructiveTriMesh::VertexData<Vec3d> * m_v;
     
     // constrained vertices
@@ -82,13 +81,9 @@ protected:
     std::vector<Vec3d> m_constrained_positions;
 
 public:
-    //////////////////////////
-    //Main functions
-    //////////////////////////
     double step(double dt);
 
     void easy_orientation();
-    //Set each triangle label (i,j) to be i>j.
 
 protected:
     double actual_dt;
@@ -104,10 +99,7 @@ protected:
     void computeDelta_d_n(const Eigen::MatrixXd &targetU, const Eigen::MatrixXi& F,Eigen::MatrixXd &Delta_d_n);
 
 public:
-    void writeObj_FaceLabel_constrainedVertices(const bool with_imaginary_vertices=false);
-    void write_mesh();
-    void write_film_mesh(std::string=".");
-    void write_constrained_mesh(std::string=".");
+    void saveResult(const bool with_imaginary_vertices,const std::string & meshname,const std::string & labelname);
 
     void volumes_and_areas(const Eigen::MatrixXd &targetU,Eigen::VectorXd &volumes, Eigen::MatrixXd& area_matrix );
     void volumes_and_areas(Eigen::VectorXd &volumes, Eigen::MatrixXd& area_matrix );

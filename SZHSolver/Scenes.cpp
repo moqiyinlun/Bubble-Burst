@@ -6,7 +6,6 @@
 
 #include <igl/read_triangle_mesh.h>
 #include <igl/writeOBJ.h>
-
 #include "eigenheaders.h"
 #include "Scenes.h"
 #include "Options.h"

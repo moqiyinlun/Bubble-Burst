@@ -1,10 +1,3 @@
-//
-//  Options.h
-//
-//  Christopher Batty, Fang Da 2014
-//
-//  Eddited by Sadashige Ishida 2017.
-
 #ifndef __Options__
 #define __Options__
 

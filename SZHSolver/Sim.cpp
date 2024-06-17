@@ -2,8 +2,6 @@
 //  Sim.cpp
 //
 //  Fang Da 2014
-//
-//  Editted by Sadashige Ishida 2017
 
 #include <sstream>
 #include <iomanip>
@@ -17,20 +15,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "YImage.h"
-#include "Colormap.h"
-#include "PRRenderer.h"
-
-#ifdef __APPLE__
-#include <OpenGL/gl.h>
-#include <OpenGL/glu.h>
-#include <GLUT/glut.h>
-#else
-#include <GL/gl.h>
-#include <GL/glu.h>
-#include <GL/glut.h>
-#endif
-
 Sim::Sim(bool verbose) :
 m_verbose(verbose),
 m_scene("unspecified"),
@@ -42,8 +26,7 @@ m_frameid(0),
 m_finished(false),
 m_nearest_vertex(-1),
 m_nearest_edge(-1),
-m_nearest_face(-1),
-m_prrenderer(NULL)
+m_nearest_face(-1)
 {
     
 }
@@ -58,7 +41,7 @@ Sim::~Sim()
 //  General initialization of a simulation
 //
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-bool Sim::init(const std::string & option_file, bool save_outputs, bool wo_visualization,const std::string env_map_path,const std::string inputdata_dir)
+bool Sim::init(const std::string & option_file,const std::string inputdata_dir)
 {
     
     // declare and load the options
@@ -123,15 +106,6 @@ bool Sim::init(const std::string & option_file, bool save_outputs, bool wo_visua
     // select the scene
     m_scene = Options::strValue("scene");
 
-    if (save_outputs)
-    {
-        std::stringstream output_dir_ss;
-        output_dir_ss << "output_" << ::time(NULL);
-        m_output_directory = output_dir_ss.str();
-        mkdir(m_output_directory.c_str(), 0755);
-        std::cout << "Outputing to directory: " << m_output_directory << std::endl;
-    }
-
     std::vector<LosTopos::Vec3d> vertices;
     std::vector<LosTopos::Vec3st> faces;
     std::vector<LosTopos::Vec2i> face_labels;
@@ -150,19 +124,6 @@ bool Sim::init(const std::string & option_file, bool save_outputs, bool wo_visua
 
     m_finished = false;
     
-    if(hgf->save_mesh){
-        hgf->write_mesh();
-        //hgf->writeObj_FaceLabel_constrainedVertices();
-    }
-    
-    // output the initial frame
-    if (m_output_directory != "" && Options::boolValue("output-mesh"))
-        MeshIO::save(*hgf, m_output_directory + "/mesh000000.rec");
-
-    // PR rendering
-    if (!wo_visualization)
-        m_prrenderer = new PRRenderer(hgf,env_map_path);
-
     return true;
 }
 
@@ -184,7 +145,7 @@ void Sim::step()
 
     static bool advect=Options::boolValue("advect");
 
-    if(step_number %200 ==0){
+    if(step_number %95 ==0){
         SZHScenes::burstBubbles(m_dt, this, hgf);
     }
     SZHScenes::volume_change(m_dt, this, hgf);
@@ -254,88 +215,12 @@ void Sim::step()
         if(passed_time>record_interval-eps){
             passed_time=0;
             
-            hgf->write_mesh();
-            //hgf->writeObj_FaceLabel_constrainedVertices();
+            //hgf->saveResult();
         }
         
     }
     step_number++;
     
-}
-
-void Sim::stepOutput(bool wo_visualization)
-{
-
-    if (m_output_directory != "")
-    {
-        
-        int frameid = (int)(time() / dt() + 0.5);
-
-        int pngfd = Options::intValue("output-png-every-n-frames");
-        if ((pngfd == 0 || frameid % pngfd == 0) && Options::boolValue("output-png") && !wo_visualization)
-        {
-            static int image_count=0;
-
-            std::stringstream png_ss;
-            
-            png_ss << m_output_directory << "/frame" << std::setfill('0') << std::setw(6) << ++image_count << ".png";
-            
-            int w, h;
-            w = glutGet(GLUT_WINDOW_WIDTH);
-            h = glutGet(GLUT_WINDOW_HEIGHT);
-            
-            YImage img;
-            img.resize(w, h);
-            glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, (unsigned char *)(img.data()));
-            img.flip();
-            img.save(png_ss.str().c_str());
-        }
-
-            int meshfd = Options::intValue("output-mesh-every-n-frames");
-            if ((meshfd == 0 || frameid % meshfd == 0) && Options::boolValue("output-mesh"))
-            {
-                static int rec_count=0;
-
-                std::stringstream mesh_ss;
-                mesh_ss << m_output_directory << "/state" << std::setfill('0') << std::setw(6) << rec_count++ << ".rec";
-                MeshIO::save(*hgf, mesh_ss.str());
-            }
-            
-            int objfd = Options::intValue("output-obj-every-n-frames");
-            if ((objfd == 0 || frameid % objfd == 0) && Options::boolValue("output-obj"))
-            {
-                static int obj_count=0;
-                
-                std::stringstream obj_ss;
-                obj_ss << m_output_directory << "/mesh" << std::setfill('0') << std::setw(6) << obj_count++ << ".obj";
-                MeshIO::saveOBJ(*hgf, obj_ss.str());
-            }
-
-    }
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-//  Loading saved simulation
-//
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-bool Sim::load(int inc)
-{
-    int current_frame = (int)((m_time + m_dt * 0.5) / m_dt);
-    int next_frame = current_frame + inc;
-    if (next_frame < 0) next_frame = 0;
-    
-    std::stringstream ss;
-    ss << m_load_directory << "/mesh" << std::setfill('0') << std::setw(6) << next_frame << ".rec";
-    if (!MeshIO::load(*hgf, ss.str()))
-    {
-        std::cout << "Loading frame " << ss.str() << " unsuccessful." << std::endl;
-        return false;
-    }
-    
-    m_time = m_dt * next_frame;
-    
-    return true;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -374,17 +259,5 @@ namespace
             if (is_edge_next_to_nonmanifold_vertices(st, st.m_mesh.m_vertex_to_edge_map[v][i]))
                 return true;
         return false;
-    }
-}
-
-void Sim::render(RenderMode rm, const Vec2d & mousepos)
-{
-    if (rm == RM_PR)
-    {
-        if(m_prrenderer->env_map_path==""){
-            return;
-        }
-        m_prrenderer->render();
-        return;
     }
 }

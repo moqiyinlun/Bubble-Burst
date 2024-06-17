@@ -8,7 +8,6 @@ set(CMAKE_CXX_COMPILER /usr/local/bin/g++)
 set(CMAKE_C_COMPILER /usr/local/bin/gcc)
 endif(APPLE)
 
-#Use C++14.
 set(CMAKE_CXX_STANDARD 14)
 
 project (SZHSolver)

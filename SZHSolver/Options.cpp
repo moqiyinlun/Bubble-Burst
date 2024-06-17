@@ -1,10 +1,3 @@
-//
-//  Options.cpp
-//
-//  Christopher Batty, Fang Da 2014
-//
-//  Editted by Sadashige Ishida 2017
-
 #include <assert.h>
 #include <fstream>
 #include <sstream>

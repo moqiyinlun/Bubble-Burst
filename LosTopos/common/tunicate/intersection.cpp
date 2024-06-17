@@ -1,6 +1,4 @@
 // Released into the public domain by Robert Bridson, 2009.
-// Modified by Sadashige Ishida, 2017.
-
 #include <cassert>
 #include <cmath>
 #include <iostream>
@@ -366,7 +364,6 @@ simplex_intersection3d(int k,
 
 //==============================================================================
 // degenerate test in 3d+time - assumes five points lie on the same hyper-plane
-//Made compailable for clang by Sadashige Ishida 2017.
 //However, gcc is highly recommended since it's more stable for hight resolution mesh.
 static int
 simplex_intersection_time3d(int k,
