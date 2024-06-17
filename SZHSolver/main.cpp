@@ -101,9 +101,10 @@ void display()
     glOrtho(0, g_sc.win_w, 0, g_sc.win_h, -1, 1);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    
+
     std::stringstream ss;
     ss << "T = " << g_sim.time();
+    
     std::string s = ss.str();
     renderBitmapString(20, g_sc.win_h - 20, 0, s);
     
@@ -115,6 +116,9 @@ void idle()
     if (g_sc.run || g_sc.step)
     {
         g_sc.step = false;
+        
+
+        
         g_sim.step();
         std::cout << "Finished step: T = " << g_sim.time() << std::endl;
         g_sim.stepOutput(g_sc.wo_visualization);
@@ -162,54 +166,12 @@ void keyboard(unsigned char k, int x, int y)
         g_sim.get_hgf()->writeObj_FaceLabel_constrainedVertices(write_imaginary_vertices);
         g_sim.get_hgf()->write_constrained_mesh("./constrained_mesh.obj");
     }
-    
-    else if (k == '+')
-    {
-        //Increasing the volume of the 0-th bubble.
-        g_sim.get_hgf()->blowing_bubble0=!g_sim.get_hgf()->blowing_bubble0;
-    }
-
-    else if (k == '/')
-    {
-        g_sim.get_hgf()->do_stepScenes=!g_sim.get_hgf()->do_stepScenes;
-    }
     else if (k == 'b')
     {
         //Burst a randomly chosen bubble.
         g_sim.get_hgf()->bursting=true;
         g_sim.step();
         g_sim.get_hgf()->bursting=false;
-        
-    }
-    else if (k == 'L')
-    {
-        g_sim.camera_information=true;
-        
-    }
-    else if (k == 'T')
-    {
-        //For adaptive time steps.
-        static bool fast=true;
-        static bool save_mesh_on=g_sim.hgf->save_mesh;
-        if(fast){
-            g_sim.m_dt=0.001;
-            fast=false;
-            if(save_mesh_on){
-                g_sim.hgf->save_mesh=false;
-            }
-        }else{
-            g_sim.m_dt=0.01;
-            fast=true;
-            //write_mesh on
-            if(save_mesh_on){
-                g_sim.hgf->save_mesh=true;
-            }
-        }
-    }
-    else if(k == 'Y'){
-        //For adaptive time steps.
-        g_sim.m_dt=0.003;
-        g_sim.hgf->damp=0.998;
         
     }
     

@@ -71,11 +71,9 @@ bool Sim::init(const std::string & option_file, bool save_outputs, bool wo_visua
     Options::addDoubleOption ("smoothing-coef", 0.0);
     Options::addDoubleOption ("damping-coef", 1.0);
     Options::addBooleanOption ("sparse", false);
-    
-        Options::addBooleanOption ("logging_geometry", true);
-        Options::addBooleanOption ("write_geometry", true);
-        Options::addBooleanOption ("logging_time", true);
-        Options::addBooleanOption ("logging_detailed_time", false);
+
+    Options::addBooleanOption ("logging_time", true);
+    Options::addBooleanOption ("logging_detailed_time", false);
 
     Options::addBooleanOption("output-png", true);
     Options::addIntegerOption("output-png-every-n-frames", 0);     // 0 means synching with simulation frame rate (equivalent to 1).
@@ -104,14 +102,13 @@ bool Sim::init(const std::string & option_file, bool save_outputs, bool wo_visua
     Options::addIntegerOption("mesh-size-n", 2);
     Options::addIntegerOption("mesh-size-m", 2);
     
-    Options::addBooleanOption("auto-burst", false);
+    Options::addBooleanOption("auto-burst", true);
     Options::addDoubleOption("auto-burst-interval", 20.0);
     Options::addDoubleOption("auto-burst-start", 10.0);
 
     Options::addBooleanOption ("save_mesh", false);
     Options::addBooleanOption ("with_gravity", false);
     Options::addBooleanOption ("add_velocity", false);
-    Options::addBooleanOption ("accel", true);
     Options::addDoubleOption ("surface_tension", 1.0);
     
     Options::addStringOption ("sub_scene", "");
@@ -147,7 +144,7 @@ bool Sim::init(const std::string & option_file, bool save_outputs, bool wo_visua
         hgf = SZHScenes::sceneInputData(this, vertices, faces, face_labels, constrained_vertices, constrained_positions,inputdata_dir);
     }
     std::cout << "initial_nv = " << vertices.size() << ", initial_nf = " << faces.size() << std::endl;
-
+    
     m_time = 0;
     m_dt = Options::doubleValue("time-step");
 
@@ -186,10 +183,10 @@ void Sim::step()
     
 
     static bool advect=Options::boolValue("advect");
-    if(hgf->bursting or Options::boolValue("auto-burst")){
-        SZHScenes::burstBubbles                (m_dt, this, hgf);
-    }
 
+    if(step_number %200 ==0){
+        SZHScenes::burstBubbles(m_dt, this, hgf);
+    }
     SZHScenes::volume_change(m_dt, this, hgf);
     
     double dt;
@@ -262,6 +259,7 @@ void Sim::step()
         }
         
     }
+    step_number++;
     
 }
 

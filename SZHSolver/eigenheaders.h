@@ -1,11 +1,3 @@
-//
-//  eigenheaders.h
-//  MultiTracker
-//
-//  Created by Fang Da on 10/24/14.
-//
-//
-
 #ifndef MultiTracker_eigenheaders_h
 #define MultiTracker_eigenheaders_h
 

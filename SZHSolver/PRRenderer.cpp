@@ -38,7 +38,7 @@ env_map_path(env_map_path)
     m_shader_env.setVertexAttribName("a_position", 0);
     m_shader_env.loadFromFile(env_map_path+"env");
     
-    create_cube_map(env_map_path+"textures/Cube/inferno", m_tex_env);
+    create_cube_map(env_map_path+"textures/beach", m_tex_env);
     
 }
 

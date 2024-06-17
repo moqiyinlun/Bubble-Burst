@@ -53,7 +53,7 @@ public:
 
 public:
     bool m_verbose;
-
+    int step_number =0;
     std::string m_scene;
     std::string m_output_directory;
     std::string m_load_directory;

@@ -217,21 +217,7 @@ void SZHScenes::burstBubbles(double dt, Sim * sim, SZHSolver * hgf)
         std::cout << "Bubble bursted." << std::endl;
         
     };
-    
-    if(Options::boolValue("auto-burst")){
-        static double s_next_burst = Options::doubleValue("auto-burst-start");
-        if (sim->m_time >= s_next_burst)
-        {
-            burst_a_bubble();
-            s_next_burst += Options::doubleValue("auto-burst-interval");
-            
-        }
-        
-    }
-    
-    if(hgf->bursting){
-        burst_a_bubble();
-    }
+    burst_a_bubble();
 }
 void SZHScenes::pullBubbles(double dt, Sim * sim, SZHSolver * hgf)
 {

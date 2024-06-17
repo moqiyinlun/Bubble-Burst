@@ -41,7 +41,6 @@ class SZH_shader:
         glAttachShader(self.program, vs)
         glAttachShader(self.program, fs)
         for i in range(len(attribute_list)):
-
             glBindAttribLocation(self.program, i, attribute_list[i])
         # Link the program
         glLinkProgram(self.program)

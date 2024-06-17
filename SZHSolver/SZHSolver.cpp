@@ -16,69 +16,15 @@
 #include <igl/volume.h>
 #include <igl/massmatrix.h>
 #include "MeshIO.h"
-#include "Options.h"
 #include "SZHSolver.h"
 #include "Options.h"
 #include "LosTopos/LosTopos3D/subdivisionscheme.h"
-
-void SZHSolver::set_parameters(){
-    
-    delta_dn_tq_juctions=1;
-
-    accel=Options::boolValue("accel");
-    damp= Options::doubleValue("damping-coef");//1.0;0.999 ;0.995;1-dt*damp_scale.
-    surface_tension=Options::doubleValue("surface_tension");;
-
-    smooth=Options::doubleValue("smoothing-coef");
-    const double eps=0.0001;
-    save_mesh=Options::boolValue("save_mesh");
-    sparse=Options::boolValue("sparse");
-    
-    //Used for logging information.
-    logging_geometry=Options::boolValue("logging_geometry");
-    write_geometry=Options::boolValue("write_geometry");;
-    logging_time=Options::boolValue("logging_time");;
-    logging_detailed_time=Options::boolValue("logging_detailed_time");;
-    
-    if(logging_detailed_time){
-        time_dAdx=0.0;
-        time_volume_correction=0.0;
-        time_los_topos=0.0;
-    }
-
-    with_gravity=Options::boolValue("with_gravity");
-    add_velocity=Options::boolValue("add_velocity");
-    double gravity_scale= 0.02;//0.007;
-    gravity_vec<<0,0,-9.8*gravity_scale;
-
-    energy_preserve_per_vertex=0;
-    energy_preserve_with_max_velocity=false;
-    
-    local_energy_preservation=0;
-
-    blowing_bubble0=false;
-    
-    bursting=false;
-    
-    do_stepScenes=false;
-
-}
 
 SZHSolver::SZHSolver(const std::vector<LosTopos::Vec3d> & vs, const std::vector<LosTopos::Vec3st> & fs, const std::vector<LosTopos::Vec2i> & ls, const std::vector<size_t> & constrained_vertices,  const std::vector<Vec3d> & constrained_positions, const int _num_bubbles):num_bubbles(_num_bubbles)
 {
 
     // construct the surface tracker
     double mean_edge_len = Options::doubleValue("remeshing-resolution");
-    if (mean_edge_len == 0)
-    {
-        for (size_t i = 0; i < fs.size(); i++)
-        {
-            mean_edge_len += mag(vs[fs[i][0]] - vs[fs[i][1]]);
-            mean_edge_len += mag(vs[fs[i][1]] - vs[fs[i][2]]);
-            mean_edge_len += mag(vs[fs[i][2]] - vs[fs[i][0]]);
-        }
-        mean_edge_len /= (fs.size() * 3);
-    }
     double min_edge_len = mean_edge_len * 0.5;
     double max_edge_len = mean_edge_len * 1.5;
     LosTopos::SurfTrackInitializationParameters params;
@@ -147,7 +93,41 @@ SZHSolver::SZHSolver(const std::vector<LosTopos::Vec3d> & vs, const std::vector<
     region_offset=num_region-num_bubbles;
     
     AIR=region_offset-1;
-    set_parameters();
+    delta_dn_tq_juctions=1;
+
+    damp= Options::doubleValue("damping-coef");//1.0;0.999 ;0.995;1-dt*damp_scale.
+    surface_tension=Options::doubleValue("surface_tension");;
+
+    smooth=Options::doubleValue("smoothing-coef");
+    const double eps=0.0001;
+    save_mesh=Options::boolValue("save_mesh");
+    sparse=Options::boolValue("sparse");
+    
+    //Used for logging information.
+    logging_time=Options::boolValue("logging_time");;
+    logging_detailed_time=Options::boolValue("logging_detailed_time");;
+    
+    if(logging_detailed_time){
+        time_dAdx=0.0;
+        time_volume_correction=0.0;
+        time_los_topos=0.0;
+    }
+
+    with_gravity=Options::boolValue("with_gravity");
+    add_velocity=Options::boolValue("add_velocity");
+    double gravity_scale= 0.02;//0.007;
+    gravity_vec<<0,0,-9.8*gravity_scale;
+
+    energy_preserve_per_vertex=0;
+    energy_preserve_with_max_velocity=false;
+    
+    local_energy_preservation=0;
+
+    blowing_bubble0=false;
+    
+    bursting=false;
+    
+    do_stepScenes=false;
     
     //Necessary for volume correction.
     easy_orientation();
@@ -156,20 +136,6 @@ SZHSolver::SZHSolver(const std::vector<LosTopos::Vec3d> & vs, const std::vector<
         volumes_and_areas( volumes, area_matrix);
     }
     initialVolumes=volumes;
-    if(logging_geometry){
-        using std::cout;using std::endl;
-        cout<<"initial volumes:";
-        for(int bi=0;bi<num_bubbles;++bi){
-            cout<<initialVolumes[bi]<<" ";
-        }
-        cout<<endl;
-        
-        cout<<"initial areas:";
-        for(int bi=0;bi<num_bubbles;++bi){
-            cout<<area_matrix(bi,bi)<<" ";
-        }
-        cout<<endl;
-    }
 }
 
 SZHSolver::~SZHSolver()
@@ -233,39 +199,32 @@ double SZHSolver::step(double dt){
 
     
     //Enforce constrained vertices to be fixed.
-    if(1)
-    {
         // before enforcing constraints, first scan through the mesh to find any solid vertices not registered as constraints. they can appear due to remeshing (splitting an all-solid edge)
-        std::vector<int> constrained_vertices_map(mesh().nv(), -1);
-        for (size_t i = 0, n_consv=m_constrained_vertices.size(); i < n_consv; i++)
-            constrained_vertices_map[m_constrained_vertices[i]] = i;
-        
-        for (size_t i = 0,nv=mesh().nv(); i <nv; i++)
+    std::vector<int> constrained_vertices_map(mesh().nv(), -1);
+    for (size_t i = 0, n_consv=m_constrained_vertices.size(); i < n_consv; i++)
+        constrained_vertices_map[m_constrained_vertices[i]] = i;
+    
+    for (size_t i = 0,nv=mesh().nv(); i <nv; i++)
+    {
+        if (m_st->vertex_is_any_solid(i) && constrained_vertices_map[i] < 0)
         {
-            if (m_st->vertex_is_any_solid(i) && constrained_vertices_map[i] < 0)
-            {
-                m_constrained_vertices.push_back(i);
-                m_constrained_positions.push_back(pos(i));
-            }
+            m_constrained_vertices.push_back(i);
+            m_constrained_positions.push_back(pos(i));
         }
-
-        //    // enforce the constraints exactly.
-        for (size_t ii = 0,n_consv=m_constrained_vertices.size(); ii <n_consv ; ii++)
-        {
-            size_t i = m_constrained_vertices[ii];
-            m_st->pm_newpositions[i] = vc(m_constrained_positions[ii]);
-            vel(i)<<0,0,0;
-        }
-        
     }
-    stepHGF(dt);
+
+    //    // enforce the constraints exactly.
+    for (size_t ii = 0,n_consv=m_constrained_vertices.size(); ii <n_consv ; ii++)
+    {
+        size_t i = m_constrained_vertices[ii];
+        m_st->pm_newpositions[i] = vc(m_constrained_positions[ii]);
+        vel(i)<<0,0,0;
+    }
+    stepCal(dt);
     // move the mesh
     auto integrate_part=[this,dt](){
         double actual_dt;
         m_st->integrate(dt, actual_dt);
-        if (actual_dt != dt)
-            std::cout << "Warning: SurfTrack::integrate() failed to step the full length of the time step!" << std::endl;
-
     };
     
     if(logging_detailed_time and count>1){
@@ -317,7 +276,6 @@ bool SZHSolver::generate_collapsed_position(LosTopos::SurfTrack & st, size_t v0,
 
 bool SZHSolver::generate_split_position(LosTopos::SurfTrack & st, size_t v0, size_t v1, LosTopos::Vec3d & pos)
 {
-    std::cout << "solid callback: generate split position: " << v0 << " " << v1 << " " << (st.vertex_is_any_solid(v0) && st.vertex_is_any_solid(v1)) << std::endl;
     pos = (st.pm_positions[v0] + st.pm_positions[v1]) / 2;
     if (st.vertex_is_any_solid(v0) && st.vertex_is_any_solid(v1))
         return false;
@@ -374,8 +332,6 @@ void SZHSolver::pre_collapse(const LosTopos::SurfTrack & st, size_t e, void ** d
     td->old_u1 = vel(td->v1);
 
     *data = (void *)td;
-    std::cout << "pre collapse: " << e << ": " << td->v0 << " " << td->v1 << std::endl;
-
     if(local_energy_preservation){
         
         auto target_faces0=st.m_mesh.m_vertex_to_triangle_map [td->v0];
@@ -418,7 +374,6 @@ void SZHSolver::pre_collapse(const LosTopos::SurfTrack & st, size_t e, void ** d
 void SZHSolver::post_collapse(const LosTopos::SurfTrack & st, size_t e, size_t merged_vertex, void * data)
 {
     CollapseTempData * td = (CollapseTempData *)data;
-    std::cout << "post collapse: " << e << ": " << td->v0 << " " << td->v1 << " => " << merged_vertex << std::endl;
     assert((st.m_mesh.vertex_is_deleted(td->v0) && merged_vertex == td->v1) || (st.m_mesh.vertex_is_deleted(td->v1) && merged_vertex == td->v0));
     
     Vec3d merged_x = vc(st.pm_positions[merged_vertex]);
@@ -537,7 +492,6 @@ void SZHSolver::pre_split(const LosTopos::SurfTrack & st, size_t e, void ** data
     td->old_u1 = vel(td->v1);
 
     *data = (void *)td;
-    std::cout << "pre split: " << e << ": " << td->v0 << " " << td->v1 << std::endl;
     
     if(local_energy_preservation){
         auto edges=st.m_mesh.m_vertex_to_edge_map[td->v0];
@@ -582,29 +536,26 @@ void SZHSolver::pre_split(const LosTopos::SurfTrack & st, size_t e, void ** data
 void SZHSolver::post_split(const LosTopos::SurfTrack & st, size_t e, size_t new_vertex, void * data)
 {
     SplitTempData * td = (SplitTempData *)data;
-    std::cout << "post split: " << e << ": " << td->v0 << " " << td->v1 << " => " << new_vertex << std::endl;
     
     Vec3d midpoint_x = vc(st.pm_positions[new_vertex]);
     double s = (midpoint_x - td->old_x0).dot(td->old_x1 - td->old_x0) / (td->old_x1 - td->old_x0).squaredNorm();
 
-    if(true){
-        if (s > 1) s = 1;
-        if (s < 0) s = 0;
+    if (s > 1) s = 1;
+    if (s < 0) s = 0;
+    
+    Vec3d new_u= td->old_u0 * (1 - s) + td->old_u1 * s;
+
+    if(energy_preserve_per_vertex){
+        double new_norm=(1-s)*td->old_u0.norm()+s*td->old_u1.norm();
         
-        Vec3d new_u= td->old_u0 * (1 - s) + td->old_u1 * s;
-
-        if(energy_preserve_per_vertex){
-            double new_norm=(1-s)*td->old_u0.norm()+s*td->old_u1.norm();
-            
-            if(energy_preserve_with_max_velocity){
-                new_norm=std::max(td->old_u0.norm(),td->old_u1.norm());
-            }
-            new_u=new_norm*new_u.normalized();
-
+        if(energy_preserve_with_max_velocity){
+            new_norm=std::max(td->old_u0.norm(),td->old_u1.norm());
         }
-        
-        vel(new_vertex) = new_u;
+        new_u=new_norm*new_u.normalized();
+
     }
+    
+    vel(new_vertex) = new_u;
 
     if(local_energy_preservation){
         auto target_faces=st.m_mesh.m_vertex_to_triangle_map [new_vertex];
@@ -637,39 +588,6 @@ void SZHSolver::post_split(const LosTopos::SurfTrack & st, size_t e, size_t new_
         vel(new_vertex)=vel(new_vertex).normalized()*sqrt(new_squared_norm);
 
     }
-    
-    //Smmooth the velocity o the new vertex.
-    if(false){
-        
-        Vec3d newVelocity(0,0,0);
-        
-        newVelocity=Vec3d(0,0,0);
-        
-        Vec3d neighborhood_mean_velocity(0,0,0);
-        
-        int neighborhood_counter = 0;
-        for (size_t k = 0; k < st.m_mesh.m_vertex_to_edge_map[new_vertex].size(); k++)
-        {
-            LosTopos::Vec2st e = st.m_mesh.m_edges[st.m_mesh.m_vertex_to_edge_map[new_vertex][k]];
-            size_t vother = (e[0] == new_vertex ? e[1] : e[0]);
-
-            neighborhood_mean_velocity += vel(vother);
-            neighborhood_counter++;
-            
-        }
-        if (neighborhood_counter != 0){
-            neighborhood_mean_velocity/=neighborhood_counter;
-            
-        }
-        
-        double smoothing_coef=0.5;//0 ~ 1.
-        
-        newVelocity=vel(new_vertex)+(neighborhood_mean_velocity-vel(new_vertex))* smoothing_coef;
-
-        vel(new_vertex) = newVelocity;
-        
-    }
-    
 }
 
 void SZHSolver::pre_flip(const LosTopos::SurfTrack & st, size_t e, void ** data)
@@ -698,11 +616,8 @@ void SZHSolver::post_t1(const LosTopos::SurfTrack & st, size_t v, size_t a, size
 {
     std::cout << "v = " << v << " -> " << a << " " << b << std::endl;
     T1TempData * td = (T1TempData *)data;
-
-    if(true){
-        vel(a) = vel(v);
-        vel(b) = vel(v);
-    }
+    vel(a) = vel(v);
+    vel(b) = vel(v);
 }
 
 struct FaceSplitTempData
@@ -743,33 +658,31 @@ void SZHSolver::post_facesplit(const LosTopos::SurfTrack & st, size_t f, size_t 
 {
     FaceSplitTempData * td = (FaceSplitTempData *)data;
 
-    if(true){
-        Vec3d new_x = vc(st.pm_positions[new_vertex]);
-        Vec3d c = Vec3d::Zero();
-        Vec3d n = (td->old_x1 - td->old_x0).cross(td->old_x2 - td->old_x0);
-        double nsq = n.squaredNorm();
-        c[0] = 1 - (new_x - td->old_x0).dot(n.cross(td->old_x1 - td->old_x2)) / nsq;
-        c[1] = 1 - (new_x - td->old_x1).dot(n.cross(td->old_x2 - td->old_x0)) / nsq;
-        if (c[0] > 1)        c[0] = 1;
-        if (c[0] < 0)        c[0] = 0;
-        if (c[1] > 1 - c[0]) c[1] = 1 - c[0];
-        if (c[1] < 0)        c[1] = 0;
-        c[2] = 1 - c[0] - c[1];
+    Vec3d new_x = vc(st.pm_positions[new_vertex]);
+    Vec3d c = Vec3d::Zero();
+    Vec3d n = (td->old_x1 - td->old_x0).cross(td->old_x2 - td->old_x0);
+    double nsq = n.squaredNorm();
+    c[0] = 1 - (new_x - td->old_x0).dot(n.cross(td->old_x1 - td->old_x2)) / nsq;
+    c[1] = 1 - (new_x - td->old_x1).dot(n.cross(td->old_x2 - td->old_x0)) / nsq;
+    if (c[0] > 1)        c[0] = 1;
+    if (c[0] < 0)        c[0] = 0;
+    if (c[1] > 1 - c[0]) c[1] = 1 - c[0];
+    if (c[1] < 0)        c[1] = 0;
+    c[2] = 1 - c[0] - c[1];
+    
+    vel(new_vertex) = td->old_u0 * c[0] + td->old_u1 * c[1] + td->old_u2 * c[2];
+    
+    if(energy_preserve_per_vertex){
+        double new_norm=c[0]*td->old_u0.norm()+c[1]*td->old_u1.norm()*c[2]*td->old_u2.norm();
         
-        vel(new_vertex) = td->old_u0 * c[0] + td->old_u1 * c[1] + td->old_u2 * c[2];
-        
-        if(energy_preserve_per_vertex){
-            double new_norm=c[0]*td->old_u0.norm()+c[1]*td->old_u1.norm()*c[2]*td->old_u2.norm();
-            
-            if(energy_preserve_with_max_velocity){
-                std::vector<double> norms={td->old_u0.norm(),td->old_u1.norm(),td->old_u2.norm()};
-                new_norm=*std::max_element(norms.begin(),norms.end());
-            }
-            
-            vel(new_vertex)=new_norm*vel(new_vertex).normalized();
+        if(energy_preserve_with_max_velocity){
+            std::vector<double> norms={td->old_u0.norm(),td->old_u1.norm(),td->old_u2.norm()};
+            new_norm=*std::max_element(norms.begin(),norms.end());
         }
         
+        vel(new_vertex)=new_norm*vel(new_vertex).normalized();
     }
+    
 }
 
 struct SnapTempData
@@ -812,55 +725,22 @@ void SZHSolver::post_snap(const LosTopos::SurfTrack & st, size_t v_kept, size_t 
     Vec3d merged_x = vc(st.pm_positions[v_kept]);
     double s = (merged_x - td->old_x0).dot(td->old_x1 - td->old_x0) / (td->old_x1 - td->old_x0).squaredNorm();
 
-    if(true){
-        
-        if (s > 1) s = 1;
-        if (s < 0) s = 0;
-        Vec3d new_u = td->old_u0 * (1 - s) + td->old_u1 * s;
+    if (s > 1) s = 1;
+    if (s < 0) s = 0;
+    Vec3d new_u = td->old_u0 * (1 - s) + td->old_u1 * s;
 
-        if(energy_preserve_per_vertex){
-            double new_norm=(1-s)*td->old_u0.norm()+s*td->old_u1.norm();
+    if(energy_preserve_per_vertex){
+        double new_norm=(1-s)*td->old_u0.norm()+s*td->old_u1.norm();
 
-            if(energy_preserve_with_max_velocity){
-                new_norm=std::max(td->old_u0.norm(),td->old_u1.norm());
-                
-            }
-            new_u=new_norm*new_u.normalized();
+        if(energy_preserve_with_max_velocity){
+            new_norm=std::max(td->old_u0.norm(),td->old_u1.norm());
             
         }
+        new_u=new_norm*new_u.normalized();
         
-        vel(v_kept) = new_u;
     }
     
-    //Smmooth the velocity of the new vertex.
-    if(false){
-        Vec3d newVelocity(0,0,0);
-        newVelocity=Vec3d(0,0,0);
-        
-        Vec3d neighborhood_mean_velocity(0,0,0);
-        
-        int neighborhood_counter = 0;
-        for (size_t k = 0; k < st.m_mesh.m_vertex_to_edge_map[v_kept].size(); k++)
-        {
-            LosTopos::Vec2st e = st.m_mesh.m_edges[st.m_mesh.m_vertex_to_edge_map[v_kept][k]];
-            size_t vother = (e[0] == v_kept ? e[1] : e[0]);
-
-            neighborhood_mean_velocity += vel(vother);
-            neighborhood_counter++;
-            
-        }
-        if (neighborhood_counter != 0){
-            neighborhood_mean_velocity/=neighborhood_counter;
-            
-        }
-        
-        double smoothing_coef=0.5;//0 ~ 1.
-        
-        newVelocity=vel(v_kept)+(neighborhood_mean_velocity-vel(v_kept))* smoothing_coef;
-
-        vel(v_kept) = newVelocity;
-        
-    }
+    vel(v_kept) = new_u;
     
 }
 
@@ -880,24 +760,17 @@ void SZHSolver::set_intermediate_implicit(double dt,Eigen::MatrixXd &U,Eigen::Ma
 
     Eigen::SimplicialLLT<Eigen::SparseMatrix<double > > solver(S);
 
-    if(accel){
-        
-        NewU=solver.solve(M*U).eval();
+    NewU=solver.solve(M*U).eval();
 
-        MatrixXd D2UDt2=surface_tension*(NewU-U)/dt;
-        if(with_gravity){
-            for(int vi=0;vi<nv;++vi){
-                D2UDt2.row(vi)+=gravity_vec;
-            }
+    MatrixXd D2UDt2=surface_tension*(NewU-U)/dt;
+    if(with_gravity){
+        for(int vi=0;vi<nv;++vi){
+            D2UDt2.row(vi)+=gravity_vec;
         }
-        
-        dUdt+=D2UDt2*dt;
-        NewU=U+dUdt*dt;
-
-    }else{
-        NewU = solver.solve(M*U).eval();
-        
     }
+    
+    dUdt+=D2UDt2*dt;
+    NewU=U+dUdt*dt;
     
 }
 
@@ -918,39 +791,19 @@ void SZHSolver::set_intermediate_symplectic_euler(double dt,Eigen::MatrixXd &U,E
     igl::invert_diag(M,Minv);
     // Laplace-Beltrami of position
     dAdx = -Minv*(L*U);
-    
-    if(accel){
-        MatrixXd D2UDt2=-surface_tension*dAdx;
-        
-        if(with_gravity){
-            //static Vector3d gravity_vector(0,0,-0.098);
-            for(int vi=0;vi<nv;++vi){
-                D2UDt2.row(vi)+=gravity_vec;
-            }
+    MatrixXd D2UDt2=-surface_tension*dAdx;
+    if(with_gravity){
+        //static Vector3d gravity_vector(0,0,-0.098);
+        for(int vi=0;vi<nv;++vi){
+            D2UDt2.row(vi)+=gravity_vec;
         }
-
-        dUdt+=D2UDt2*dt;
-        NewU=U+dUdt*dt;
-        
-        //For adaptive time step, according to the maximal curvature.
-        //Not available in the current implementation.
-        //Extract mgnitude as mean curvature
-        //
-        //VectorXd H = dAdx.rowwise().norm();
-        //double coef=1.;//0.1;
-        //double ddt=coef/H.maxCoeff();
-        //dUdt+=D2UDt2*ddt;
-        //NewU=U+dUdt*ddt;
-        
-    }else{
-        double small_scale=1.0;
-        auto DU=-small_scale*surface_tension*dAdx*dt;
-        NewU=U+DU;
     }
+    dUdt+=D2UDt2*dt;
+    NewU=U+dUdt*dt;
     
 }
 
-void SZHSolver::stepHGF(double dt){
+void SZHSolver::stepCal(double dt){
 
     using namespace Eigen;
     
@@ -1153,11 +1006,7 @@ void SZHSolver::computeDelta_d_n(const Eigen::MatrixXd &targetU,const Eigen::Mat
         
     }
 
-    //Special care for t/q-junctions.
-    //Needs to be true when handling junctions accurately.
     if(delta_dn_tq_juctions){
-        
-        //For triple junctions
         for(size_t v=0;v<nv;++v){
             
             if(!is_tq_junc[v]){
@@ -1212,26 +1061,14 @@ void SZHSolver::computeDelta_d_n(const Eigen::MatrixXd &targetU,const Eigen::Mat
             std::vector<size_t>adjacent_vertices;
             mesh().get_adjacent_vertices(q, adjacent_vertices);
             
-            const bool consider_only_t_juncs=true;
-            if(!consider_only_t_juncs){
-                //Take the average of all the neighbor vertices.
-                for(size_t ad_v:adjacent_vertices){
-                    Delta_d_n.row(q)+=Delta_d_n.row(ad_v);
-                    
-                }
-            }
+            auto incident_edges=mesh().m_vertex_to_edge_map[q];
+            int num_incident_edges=incident_edges.size();
             
-            else {
-                //Take the average of only the t-junc neighborfoods.
-                auto incident_edges=mesh().m_vertex_to_edge_map[q];
-                int num_incident_edges=incident_edges.size();
-                
-                for(size_t ei=0;ei<num_incident_edges;++ei){
-                    size_t edge=incident_edges[ei];
-                    if(mesh().is_edge_nonmanifold(edge)){
-                        size_t ad_v=edge_other_vertex(ei, q);
-                        Delta_d_n.row(q)+=Delta_d_n.row(ad_v);
-                    }
+            for(size_t ei=0;ei<num_incident_edges;++ei){
+                size_t edge=incident_edges[ei];
+                if(mesh().is_edge_nonmanifold(edge)){
+                    size_t ad_v=edge_other_vertex(ei, q);
+                    Delta_d_n.row(q)+=Delta_d_n.row(ad_v);
                 }
             }
 
@@ -1424,7 +1261,7 @@ void SZHSolver::volumes_and_areas(const Eigen::MatrixXd &targetU , Eigen::Vector
 
 }
 
-void SZHSolver::volumes_and_areas( Eigen::VectorXd &volumes, Eigen::MatrixXd& area_matrix){
+void SZHSolver::volumes_and_areas(Eigen::VectorXd &volumes, Eigen::MatrixXd& area_matrix){
 
     using namespace Eigen;
     

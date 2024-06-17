@@ -17,12 +17,6 @@ class SZHSolver : public LosTopos::SurfTrack::SolidVerticesCallback, public LosT
     friend class SZHScenes;
 
 public:
-    //////////////////////////
-    //Simulation parameters.
-    //////////////////////////
-    
-    bool accel=true;//The flow is parabolic if it is false.
-    
     double damp=1.0;
     double surface_tension=1.0;
     
@@ -36,19 +30,12 @@ public:
     
     bool implicit_scheme=false;
     
-    //Used for logging information.
-    bool logging_geometry=true;
-    bool write_geometry=true;
     
     bool logging_time=false;
     bool logging_detailed_time=false;
     double time_dAdx,time_volume_correction,time_los_topos;
     double ave_time_dAdx,ave_time_volume_correction,ave_time_los_topos;
 
-    //Used for energy preservation.
-    //Recommended to be all false,
-    //since none of them does not work well
-    //at this moment.
     bool local_energy_preservation=false;
     bool energy_preserve_per_vertex=false;
     bool energy_preserve_with_max_velocity=false;
@@ -85,14 +72,8 @@ protected:
     LosTopos::SurfTrack * m_st;
  
     bool delta_dn_tq_juctions=true;
-    //Special care for t/q-junction
-    //when determining the amount of correction
-    //for volume preservation.
-    
     int region_offset=1;//Offset for open regions
     int AIR;//Maximum index of open regions.
-    //Basically, AIR=region_offet-1;
-    
     // Velocities of vertices
     LosTopos::NonDestructiveTriMesh::VertexData<Vec3d> * m_v;
     
@@ -108,17 +89,11 @@ public:
 
     void easy_orientation();
     //Set each triangle label (i,j) to be i>j.
-    
-    void set_parameters();
-    
 
 protected:
-    //////////////////////////
-    //For updating the state
-    //////////////////////////
     double actual_dt;
     
-    void stepHGF(double dt);
+    void stepCal(double dt);
     
     void set_intermediate_symplectic_euler(double dt,Eigen::MatrixXd &U,Eigen::MatrixXi& F,Eigen::MatrixXd &dUdt,Eigen::MatrixXd &NewU);
     
@@ -129,14 +104,10 @@ protected:
     void computeDelta_d_n(const Eigen::MatrixXd &targetU, const Eigen::MatrixXi& F,Eigen::MatrixXd &Delta_d_n);
 
 public:
-    ////////////////////
-    //Utilities
-    ////////////////////
     void writeObj_FaceLabel_constrainedVertices(const bool with_imaginary_vertices=false);
     void write_mesh();
     void write_film_mesh(std::string=".");
     void write_constrained_mesh(std::string=".");
-    //Make data structure where each row i of FE indicates the edges of the i-th triangle, and each row j of EV indicates the vertices of the j-th edge.
 
     void volumes_and_areas(const Eigen::MatrixXd &targetU,Eigen::VectorXd &volumes, Eigen::MatrixXd& area_matrix );
     void volumes_and_areas(Eigen::VectorXd &volumes, Eigen::MatrixXd& area_matrix );
@@ -158,7 +129,7 @@ public:
         { vels[i] = vel(i);}
         return vels;
     }
-    VecXd    velv() const {
+    VecXd velv() const {
         int nv=mesh().nv();
         VecXd vels = VecXd::Zero(nv* 3);
         for (size_t i = 0; i < nv; i++)
@@ -189,8 +160,8 @@ protected:
     //////////////////////////
 protected:
     // SurfTrack::SolidVerticesCallback method
-    bool            generate_collapsed_position(LosTopos::SurfTrack & st, size_t v0, size_t v1, LosTopos::Vec3d & pos);
-    bool            generate_split_position(LosTopos::SurfTrack & st, size_t v0, size_t v1, LosTopos::Vec3d & pos);
+    bool generate_collapsed_position(LosTopos::SurfTrack & st, size_t v0, size_t v1, LosTopos::Vec3d & pos);
+    bool generate_split_position(LosTopos::SurfTrack & st, size_t v0, size_t v1, LosTopos::Vec3d & pos);
     LosTopos::Vec3c generate_split_solid_label(LosTopos::SurfTrack & st, size_t v0, size_t v1, const LosTopos::Vec3c & label0, const LosTopos::Vec3c & label1);
     
     // T1Transition::VelocityFieldCallback methods
