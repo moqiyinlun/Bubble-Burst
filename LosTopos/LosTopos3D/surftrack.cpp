@@ -1360,8 +1360,6 @@ namespace LosTopos {
         if (edge_is_any_solid(edge))
         {
             assert(m_solid_vertices_callback);
-            if (m_solid_vertices_callback->solid_edge_is_feature(*this, edge))
-                return true;
         }
         return get_largest_dihedral(edge) > m_feature_edge_angle_threshold;
     }
@@ -1371,8 +1369,6 @@ namespace LosTopos {
         if (edge_is_any_solid(edge))
         {
             assert(m_solid_vertices_callback);
-            if (m_solid_vertices_callback->solid_edge_is_feature(*this, edge))
-                return true;
         }
         return get_largest_dihedral(edge, cached_normals) > m_feature_edge_angle_threshold;
     }

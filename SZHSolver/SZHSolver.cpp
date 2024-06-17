@@ -17,11 +17,11 @@
 #include <igl/massmatrix.h>
 #include "MeshIO.h"
 #include "Options.h"
-#include "HGF.h"
+#include "SZHSolver.h"
 #include "Options.h"
 #include "LosTopos/LosTopos3D/subdivisionscheme.h"
 
-void HGF::set_parameters(){
+void SZHSolver::set_parameters(){
     
     delta_dn_tq_juctions=1;
 
@@ -64,7 +64,7 @@ void HGF::set_parameters(){
 
 }
 
-HGF::HGF(const std::vector<LosTopos::Vec3d> & vs, const std::vector<LosTopos::Vec3st> & fs, const std::vector<LosTopos::Vec2i> & ls, const std::vector<size_t> & constrained_vertices,  const std::vector<Vec3d> & constrained_positions, const int _num_bubbles):num_bubbles(_num_bubbles)
+SZHSolver::SZHSolver(const std::vector<LosTopos::Vec3d> & vs, const std::vector<LosTopos::Vec3st> & fs, const std::vector<LosTopos::Vec2i> & ls, const std::vector<size_t> & constrained_vertices,  const std::vector<Vec3d> & constrained_positions, const int _num_bubbles):num_bubbles(_num_bubbles)
 {
 
     // construct the surface tracker
@@ -172,13 +172,13 @@ HGF::HGF(const std::vector<LosTopos::Vec3d> & vs, const std::vector<LosTopos::Ve
     }
 }
 
-HGF::~HGF()
+SZHSolver::~SZHSolver()
 {
     if (m_st)
         delete m_st;
 }
 
-double HGF::step(double dt){
+double SZHSolver::step(double dt){
     
     actual_dt=dt;
     
@@ -295,7 +295,7 @@ double HGF::step(double dt){
 //  Callbacks
 //
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-bool HGF::generate_collapsed_position(LosTopos::SurfTrack & st, size_t v0, size_t v1, LosTopos::Vec3d & pos)
+bool SZHSolver::generate_collapsed_position(LosTopos::SurfTrack & st, size_t v0, size_t v1, LosTopos::Vec3d & pos)
 {
     if (st.vertex_is_any_solid(v0) && st.vertex_is_any_solid(v1))
     {
@@ -315,7 +315,7 @@ bool HGF::generate_collapsed_position(LosTopos::SurfTrack & st, size_t v0, size_
     }
 }
 
-bool HGF::generate_split_position(LosTopos::SurfTrack & st, size_t v0, size_t v1, LosTopos::Vec3d & pos)
+bool SZHSolver::generate_split_position(LosTopos::SurfTrack & st, size_t v0, size_t v1, LosTopos::Vec3d & pos)
 {
     std::cout << "solid callback: generate split position: " << v0 << " " << v1 << " " << (st.vertex_is_any_solid(v0) && st.vertex_is_any_solid(v1)) << std::endl;
     pos = (st.pm_positions[v0] + st.pm_positions[v1]) / 2;
@@ -325,12 +325,8 @@ bool HGF::generate_split_position(LosTopos::SurfTrack & st, size_t v0, size_t v1
         return true;
 }
 
-LosTopos::Vec3c HGF::generate_collapsed_solid_label(LosTopos::SurfTrack & st, size_t v0, size_t v1, const LosTopos::Vec3c & label0, const LosTopos::Vec3c & label1)
-{
-    return LosTopos::Vec3c(1, 1, 1);
-}
 
-LosTopos::Vec3c HGF::generate_split_solid_label(LosTopos::SurfTrack & st, size_t v0, size_t v1, const LosTopos::Vec3c & label0, const LosTopos::Vec3c & label1)
+LosTopos::Vec3c SZHSolver::generate_split_solid_label(LosTopos::SurfTrack & st, size_t v0, size_t v1, const LosTopos::Vec3c & label0, const LosTopos::Vec3c & label1)
 {
     if (st.vertex_is_any_solid(v0) && st.vertex_is_any_solid(v1))
         return LosTopos::Vec3c(1, 1, 1);
@@ -342,29 +338,11 @@ LosTopos::Vec3c HGF::generate_split_solid_label(LosTopos::SurfTrack & st, size_t
         return LosTopos::Vec3c(0, 0, 0);
 }
 
-bool HGF::generate_edge_popped_positions(LosTopos::SurfTrack & st, size_t oldv, const LosTopos::Vec2i & cut, LosTopos::Vec3d & pos_upper, LosTopos::Vec3d & pos_lower)
-{
-    return false;
-}
 
-bool HGF::generate_vertex_popped_positions(LosTopos::SurfTrack & st, size_t oldv, int A, int B, LosTopos::Vec3d & pos_a, LosTopos::Vec3d & pos_b)
-{
-    return false;
-}
 
-bool HGF::solid_edge_is_feature(const LosTopos::SurfTrack & st, size_t e)
-{
-    return false;
-}
-
-LosTopos::Vec3d HGF::sampleVelocity(LosTopos::Vec3d & pos)
+LosTopos::Vec3d SZHSolver::sampleVelocity(LosTopos::Vec3d & pos)
 {
     return LosTopos::Vec3d(0, 0, 0);
-}
-
-bool HGF::sampleDirectionalDivergence(const LosTopos::Vec3d & pos, const LosTopos::Vec3d & dir, double & output)
-{
-    return false;
 }
 
 struct CollapseTempData
@@ -383,7 +361,7 @@ struct CollapseTempData
     double local_area;
 };
 
-void HGF::pre_collapse(const LosTopos::SurfTrack & st, size_t e, void ** data)
+void SZHSolver::pre_collapse(const LosTopos::SurfTrack & st, size_t e, void ** data)
 {
     CollapseTempData * td = new CollapseTempData;
     td->v0 = st.m_mesh.m_edges[e][0];
@@ -437,7 +415,7 @@ void HGF::pre_collapse(const LosTopos::SurfTrack & st, size_t e, void ** data)
     }
 }
 
-void HGF::post_collapse(const LosTopos::SurfTrack & st, size_t e, size_t merged_vertex, void * data)
+void SZHSolver::post_collapse(const LosTopos::SurfTrack & st, size_t e, size_t merged_vertex, void * data)
 {
     CollapseTempData * td = (CollapseTempData *)data;
     std::cout << "post collapse: " << e << ": " << td->v0 << " " << td->v1 << " => " << merged_vertex << std::endl;
@@ -546,7 +524,7 @@ struct SplitTempData
     double local_area;
 };
 
-void HGF::pre_split(const LosTopos::SurfTrack & st, size_t e, void ** data)
+void SZHSolver::pre_split(const LosTopos::SurfTrack & st, size_t e, void ** data)
 {
     SplitTempData * td = new SplitTempData;
     td->v0 = st.m_mesh.m_edges[e][0];
@@ -601,7 +579,7 @@ void HGF::pre_split(const LosTopos::SurfTrack & st, size_t e, void ** data)
 
 }
 
-void HGF::post_split(const LosTopos::SurfTrack & st, size_t e, size_t new_vertex, void * data)
+void SZHSolver::post_split(const LosTopos::SurfTrack & st, size_t e, size_t new_vertex, void * data)
 {
     SplitTempData * td = (SplitTempData *)data;
     std::cout << "post split: " << e << ": " << td->v0 << " " << td->v1 << " => " << new_vertex << std::endl;
@@ -694,14 +672,14 @@ void HGF::post_split(const LosTopos::SurfTrack & st, size_t e, size_t new_vertex
     
 }
 
-void HGF::pre_flip(const LosTopos::SurfTrack & st, size_t e, void ** data)
+void SZHSolver::pre_flip(const LosTopos::SurfTrack & st, size_t e, void ** data)
 {
-    
+    // virtual function... void one 
 }
 
-void HGF::post_flip(const LosTopos::SurfTrack & st, size_t e, void * data)
+void SZHSolver::post_flip(const LosTopos::SurfTrack & st, size_t e, void * data)
 {
-    
+    // virtual function... void one 
 }
 
 struct T1TempData
@@ -709,14 +687,14 @@ struct T1TempData
     
 };
 
-void HGF::pre_t1(const LosTopos::SurfTrack & st, size_t v, void ** data)
+void SZHSolver::pre_t1(const LosTopos::SurfTrack & st, size_t v, void ** data)
 {
     T1TempData * td = new T1TempData;
     
     *data = (void *)td;
 }
 
-void HGF::post_t1(const LosTopos::SurfTrack & st, size_t v, size_t a, size_t b, void * data)
+void SZHSolver::post_t1(const LosTopos::SurfTrack & st, size_t v, size_t a, size_t b, void * data)
 {
     std::cout << "v = " << v << " -> " << a << " " << b << std::endl;
     T1TempData * td = (T1TempData *)data;
@@ -742,7 +720,7 @@ struct FaceSplitTempData
     Vec3d old_u2;
 };
 
-void HGF::pre_facesplit(const LosTopos::SurfTrack & st, size_t f, void ** data)
+void SZHSolver::pre_facesplit(const LosTopos::SurfTrack & st, size_t f, void ** data)
 {
     FaceSplitTempData * td = new FaceSplitTempData;
     
@@ -761,7 +739,7 @@ void HGF::pre_facesplit(const LosTopos::SurfTrack & st, size_t f, void ** data)
     *data = (void *)td;
 }
 
-void HGF::post_facesplit(const LosTopos::SurfTrack & st, size_t f, size_t new_vertex, void * data)
+void SZHSolver::post_facesplit(const LosTopos::SurfTrack & st, size_t f, size_t new_vertex, void * data)
 {
     FaceSplitTempData * td = (FaceSplitTempData *)data;
 
@@ -806,7 +784,7 @@ struct SnapTempData
     Vec3d old_u1;
 };
 
-void HGF::pre_snap(const LosTopos::SurfTrack & st, size_t v0, size_t v1, void ** data)
+void SZHSolver::pre_snap(const LosTopos::SurfTrack & st, size_t v0, size_t v1, void ** data)
 {
     SnapTempData * td = new SnapTempData;
     td->v0 = v0;
@@ -822,7 +800,7 @@ void HGF::pre_snap(const LosTopos::SurfTrack & st, size_t v0, size_t v1, void **
     std::cout << "pre snap: " << v0 << " " << v1 << std::endl;
 }
 
-void HGF::post_snap(const LosTopos::SurfTrack & st, size_t v_kept, size_t v_deleted, void * data)
+void SZHSolver::post_snap(const LosTopos::SurfTrack & st, size_t v_kept, size_t v_deleted, void * data)
 {
     SnapTempData * td = (SnapTempData *)data;
     std::cout << "post snap: " << td->v0 << " " << td->v1 << " => " << v_kept << std::endl;
@@ -886,7 +864,7 @@ void HGF::post_snap(const LosTopos::SurfTrack & st, size_t v_kept, size_t v_dele
     
 }
 
-void HGF::set_intermediate_implicit(double dt,Eigen::MatrixXd &U,Eigen::MatrixXi& F,Eigen::MatrixXd &dUdt,Eigen::MatrixXd &NewU){
+void SZHSolver::set_intermediate_implicit(double dt,Eigen::MatrixXd &U,Eigen::MatrixXi& F,Eigen::MatrixXd &dUdt,Eigen::MatrixXd &NewU){
     using namespace Eigen;
     size_t nv=U.rows();
     size_t nt=F.rows();
@@ -923,7 +901,7 @@ void HGF::set_intermediate_implicit(double dt,Eigen::MatrixXd &U,Eigen::MatrixXi
     
 }
 
-void HGF::set_intermediate_symplectic_euler(double dt,Eigen::MatrixXd &U,Eigen::MatrixXi& F,Eigen::MatrixXd &dUdt,Eigen::MatrixXd &NewU){
+void SZHSolver::set_intermediate_symplectic_euler(double dt,Eigen::MatrixXd &U,Eigen::MatrixXi& F,Eigen::MatrixXd &dUdt,Eigen::MatrixXd &NewU){
     using namespace Eigen;
     size_t nv=U.rows();
     size_t nt=F.rows();
@@ -972,7 +950,7 @@ void HGF::set_intermediate_symplectic_euler(double dt,Eigen::MatrixXd &U,Eigen::
     
 }
 
-void HGF::stepHGF(double dt){
+void SZHSolver::stepHGF(double dt){
 
     using namespace Eigen;
     
@@ -1081,7 +1059,7 @@ void HGF::stepHGF(double dt){
 
 //Correct volume of each closed region.
 //This is an extension of [Muller 2009]"Fast and Robust Tracking of Fluid Surfaces" for multiple regions.
-void  HGF::correct_volume(Eigen::MatrixXd &targetU,Eigen::MatrixXi& F){
+void  SZHSolver::correct_volume(Eigen::MatrixXd &targetU,Eigen::MatrixXi& F){
     using namespace Eigen;
     
     MatrixXd Delta_d_n;
@@ -1090,7 +1068,7 @@ void  HGF::correct_volume(Eigen::MatrixXd &targetU,Eigen::MatrixXi& F){
     
 }
 
-void HGF::computeDelta_d_n(const Eigen::MatrixXd &targetU,const Eigen::MatrixXi& F,Eigen::MatrixXd &Delta_d_n){
+void SZHSolver::computeDelta_d_n(const Eigen::MatrixXd &targetU,const Eigen::MatrixXi& F,Eigen::MatrixXd &Delta_d_n){
     
     using namespace Eigen;
     
@@ -1266,7 +1244,7 @@ void HGF::computeDelta_d_n(const Eigen::MatrixXd &targetU,const Eigen::MatrixXi&
 }
 
 
-void HGF::writeObj_FaceLabel_constrainedVertices(const bool with_imaginary_vertices){
+void SZHSolver::writeObj_FaceLabel_constrainedVertices(const bool with_imaginary_vertices){
     
     const bool with_normal=false;
     const bool change_y_z=true;
@@ -1297,7 +1275,7 @@ void HGF::writeObj_FaceLabel_constrainedVertices(const bool with_imaginary_verti
 
 }
 
-void HGF::write_constrained_mesh(std::string outputfile){
+void SZHSolver::write_constrained_mesh(std::string outputfile){
     
     if(Constrained_V.size()>0){
         
@@ -1308,12 +1286,12 @@ void HGF::write_constrained_mesh(std::string outputfile){
     }
 }
 
-void HGF::write_film_mesh(std::string outputfile){
+void SZHSolver::write_film_mesh(std::string outputfile){
     
     MeshIO::saveOBJ(*this, outputfile,false,false,true);
 }
 
-void HGF::write_mesh(){
+void SZHSolver::write_mesh(){
     static int count=0;
 
     std::string output_directory="outputmesh/";
@@ -1329,7 +1307,7 @@ void HGF::write_mesh(){
 }
 
 
-void HGF::total_area(double time,bool write){
+void SZHSolver::total_area(double time,bool write){
     
     using namespace Eigen;
     double area=0;
@@ -1379,7 +1357,7 @@ void HGF::total_area(double time,bool write){
     
 }
 
-void HGF::easy_orientation(){
+void SZHSolver::easy_orientation(){
     //Set each triangle label (i,j) to be i>j.
     
     int nt=mesh().nt();
@@ -1394,7 +1372,7 @@ void HGF::easy_orientation(){
     }
 }
 
-void HGF::volumes_and_areas(const Eigen::MatrixXd &targetU , Eigen::VectorXd &volumes, Eigen::MatrixXd& area_matrix){
+void SZHSolver::volumes_and_areas(const Eigen::MatrixXd &targetU , Eigen::VectorXd &volumes, Eigen::MatrixXd& area_matrix){
         using namespace Eigen;
     
     volumes=VectorXd::Zero(num_bubbles);
@@ -1446,7 +1424,7 @@ void HGF::volumes_and_areas(const Eigen::MatrixXd &targetU , Eigen::VectorXd &vo
 
 }
 
-void HGF::volumes_and_areas( Eigen::VectorXd &volumes, Eigen::MatrixXd& area_matrix){
+void SZHSolver::volumes_and_areas( Eigen::VectorXd &volumes, Eigen::MatrixXd& area_matrix){
 
     using namespace Eigen;
     

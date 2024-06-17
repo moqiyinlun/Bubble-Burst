@@ -11,7 +11,7 @@ endif(APPLE)
 #Use C++14.
 set(CMAKE_CXX_STANDARD 14)
 
-project (HGF)
+project (SZHSolver)
 set (MULTITRACKER_MAJOR_VERSION "1")
 set (MULTITRACKER_MINOR_VERSION "0")
 set (MULTITRACKER_BUGFIX_VERSION "0")
@@ -85,5 +85,5 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/LosTopos/common/tunicate)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_subdirectory (LosTopos)
-add_subdirectory (HGF)
+add_subdirectory (SZHSolver)
 

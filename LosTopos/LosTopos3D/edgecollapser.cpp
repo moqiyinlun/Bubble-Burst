@@ -550,7 +550,7 @@ bool EdgeCollapser::get_new_vertex_position_dihedral(Vec3d& vertex_new_position,
     if (keep_vert_is_any_solid || delete_vert_is_any_solid)
     {
         assert(m_surf.m_solid_vertices_callback);
-        new_vert_solid_label = m_surf.m_solid_vertices_callback->generate_collapsed_solid_label(m_surf, vertex_to_keep, vertex_to_delete, keep_vert_is_solid, delete_vert_is_solid);
+        new_vert_solid_label = LosTopos::Vec3c(1, 1, 1);
     }
     
     if (keep_vert_is_any_solid)   keep_rank = 5;

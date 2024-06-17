@@ -1,5 +1,5 @@
-#ifndef __MultiTracker__HGF__
-#define __MultiTracker__HGF__
+#ifndef __MultiTracker__SZHSolver__
+#define __MultiTracker__SZHSolver__
 
 #include <iostream>
 #include <memory>
@@ -11,7 +11,7 @@
 
 class Sim;
 class SZHScenes;
-class HGF : public LosTopos::SurfTrack::SolidVerticesCallback, public LosTopos::T1Transition::VelocityFieldCallback, public LosTopos::SurfTrack::MeshEventCallback
+class SZHSolver : public LosTopos::SurfTrack::SolidVerticesCallback, public LosTopos::T1Transition::VelocityFieldCallback, public LosTopos::SurfTrack::MeshEventCallback
 {
     friend class Sim;
     friend class SZHScenes;
@@ -77,9 +77,9 @@ public:
     std::vector<std::unique_ptr<Eigen::Vector3d>> velocity_per_bubble;
     Eigen::Vector3d gravity_vec;
 
-    HGF(const std::vector<LosTopos::Vec3d> & vs, const std::vector<LosTopos::Vec3st> & fs, const std::vector<LosTopos::Vec2i> & ls, const std::vector<size_t> & constrained_vertices= std::vector<size_t>(),  const std::vector<Vec3d> & constrained_positions = std::vector<Vec3d>(),const int num_bubbles=-1);
+    SZHSolver(const std::vector<LosTopos::Vec3d> & vs, const std::vector<LosTopos::Vec3st> & fs, const std::vector<LosTopos::Vec2i> & ls, const std::vector<size_t> & constrained_vertices= std::vector<size_t>(),  const std::vector<Vec3d> & constrained_positions = std::vector<Vec3d>(),const int num_bubbles=-1);
     
-    ~HGF();
+    ~SZHSolver();
     
 protected:
     LosTopos::SurfTrack * m_st;
@@ -191,15 +191,10 @@ protected:
     // SurfTrack::SolidVerticesCallback method
     bool            generate_collapsed_position(LosTopos::SurfTrack & st, size_t v0, size_t v1, LosTopos::Vec3d & pos);
     bool            generate_split_position(LosTopos::SurfTrack & st, size_t v0, size_t v1, LosTopos::Vec3d & pos);
-    LosTopos::Vec3c generate_collapsed_solid_label(LosTopos::SurfTrack & st, size_t v0, size_t v1, const LosTopos::Vec3c & label0, const LosTopos::Vec3c & label1);
     LosTopos::Vec3c generate_split_solid_label(LosTopos::SurfTrack & st, size_t v0, size_t v1, const LosTopos::Vec3c & label0, const LosTopos::Vec3c & label1);
-    bool            generate_edge_popped_positions(LosTopos::SurfTrack & st, size_t oldv, const LosTopos::Vec2i & cut, LosTopos::Vec3d & pos_upper, LosTopos::Vec3d & pos_lower);
-    bool            generate_vertex_popped_positions(LosTopos::SurfTrack & st, size_t oldv, int A, int B, LosTopos::Vec3d & pos_a, LosTopos::Vec3d & pos_b);
-    bool            solid_edge_is_feature(const LosTopos::SurfTrack & st, size_t e);
     
     // T1Transition::VelocityFieldCallback methods
     LosTopos::Vec3d sampleVelocity(LosTopos::Vec3d & pos);
-    bool sampleDirectionalDivergence(const LosTopos::Vec3d & pos, const LosTopos::Vec3d & dir, double & output);
     
     // SurfTrack::MeshEventCallback
     void pre_collapse(const LosTopos::SurfTrack & st, size_t e, void ** data);

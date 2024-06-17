@@ -12,7 +12,7 @@
 #include "Options.h"
 #include "MeshIO.h"
 #include "Sim.h"
-#include "HGF.h"
+#include "SZHSolver.h"
 
 class OrderComp
 {
@@ -83,7 +83,7 @@ void subdivide(const Vec3d & center, double r, std::vector<Vec3d> & vs, std::vec
 }
     
 
-HGF * SZHScenes::sceneInputData(Sim * sim, std::vector<LosTopos::Vec3d> & vs, std::vector<LosTopos::Vec3st> & fs, std::vector<LosTopos::Vec2i> & ls, std::vector<size_t> & cv, std::vector<Vec3d> & cx,const std::string inputdata_dir)
+SZHSolver * SZHScenes::sceneInputData(Sim * sim, std::vector<LosTopos::Vec3d> & vs, std::vector<LosTopos::Vec3st> & fs, std::vector<LosTopos::Vec2i> & ls, std::vector<size_t> & cv, std::vector<Vec3d> & cx,const std::string inputdata_dir)
 {
     int num_bubbles=-1;
 
@@ -161,12 +161,12 @@ HGF * SZHScenes::sceneInputData(Sim * sim, std::vector<LosTopos::Vec3d> & vs, st
         fs[i] = LosTopos::Vec3st(f[i][0], f[i][1], f[i][2]);
     for (size_t i = 0; i < l.size(); i++)
         ls[i] = LosTopos::Vec2i (l[i][0], l[i][1]);
-    return new HGF(vs,fs,ls,cv,cx,num_bubbles );
+    return new SZHSolver(vs,fs,ls,cv,cx,num_bubbles);
 }
 
 
 
-void SZHScenes::burstBubbles(double dt, Sim * sim, HGF * hgf)
+void SZHScenes::burstBubbles(double dt, Sim * sim, SZHSolver * hgf)
 {
     
     auto burst_a_bubble=[hgf](){
@@ -233,7 +233,7 @@ void SZHScenes::burstBubbles(double dt, Sim * sim, HGF * hgf)
         burst_a_bubble();
     }
 }
-void SZHScenes::pullBubbles(double dt, Sim * sim, HGF * hgf)
+void SZHScenes::pullBubbles(double dt, Sim * sim, SZHSolver * hgf)
 {
     Vec3d center0(0, 0, 0);
     int counter0 = 0;
@@ -264,7 +264,7 @@ void SZHScenes::pullBubbles(double dt, Sim * sim, HGF * hgf)
         hgf->m_constrained_positions[i] += (hgf->m_constrained_positions[i].x() > 0 ? 1 : -1) * dir * pulling_velocity * dt;
 }
 
-void SZHScenes::volume_change(double dt, Sim * sim, HGF * hgf){
+void SZHScenes::volume_change(double dt, Sim * sim, SZHSolver * hgf){
     
     if(hgf->blowing_bubble0){
         

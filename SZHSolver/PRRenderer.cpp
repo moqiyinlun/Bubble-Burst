@@ -15,7 +15,7 @@
 #include "PRRenderer.h"
 #include <png.h>
 
-PRRenderer::PRRenderer(HGF * hgf,const std::string env_map_path) :
+PRRenderer::PRRenderer(SZHSolver * hgf,const std::string env_map_path) :
 hgf(hgf),
 m_shader_bubble(),
 m_shader_env(),

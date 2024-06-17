@@ -305,7 +305,6 @@ bool T1Transition::t1_pass()
         if (m_surf.vertex_is_any_solid(xj))
         {
             assert(m_surf.m_solid_vertices_callback);
-            m_surf.m_solid_vertices_callback->generate_vertex_popped_positions(m_surf, xj, A, B, a_desired_position, b_desired_position);
         }
         
         // collision test

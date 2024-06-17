@@ -10,7 +10,7 @@
 #include "MeshIO.h"
 #include <map>
 
-bool MeshIO::save(HGF & hgf, const std::string & filename, bool binary)
+bool MeshIO::save(SZHSolver & hgf, const std::string & filename, bool binary)
 {
     LosTopos::SurfTrack & st = *(hgf.surfTrack());
     
@@ -30,9 +30,6 @@ bool MeshIO::save(HGF & hgf, const std::string & filename, bool binary)
             os.write((char *)&(x[0]), sizeof (x[0]));
             os.write((char *)&(x[1]), sizeof (x[1]));
             os.write((char *)&(x[2]), sizeof (x[2]));
-            
-            //TODO: Insert here code to save velocities.
-
         }
         
         n = st.m_mesh.nt();
@@ -74,8 +71,6 @@ bool MeshIO::save(HGF & hgf, const std::string & filename, bool binary)
         for (size_t i = 0; i < st.m_mesh.nv(); i++)
         {
             os << st.get_position(i);
-            
-            //TODO: Insert here code to save velocities.
             os << std::endl;
         }
         
@@ -93,14 +88,12 @@ bool MeshIO::save(HGF & hgf, const std::string & filename, bool binary)
         os << hgf.constrainedVertices().size() << std::endl;
         for (size_t i = 0; i < hgf.constrainedVertices().size(); i++)
             os << hgf.constrainedVertices()[i] << " " << hgf.constrainedPositions()[i][0] << " " << hgf.constrainedPositions()[i][1] << " " << hgf.constrainedPositions()[i][2] << std::endl;
-        
         os.close();
-        
         return os.good();
     }
 }
 
-bool MeshIO::load(HGF & hgf, const std::string & filename, bool binary)
+bool MeshIO::load(SZHSolver & hgf, const std::string & filename, bool binary)
 {
     LosTopos::SurfTrack & st = *(hgf.surfTrack());
     
@@ -110,7 +103,6 @@ bool MeshIO::load(HGF & hgf, const std::string & filename, bool binary)
         std::cout << "[MeshIO::load] Error: file " << filename << " not found." << std::endl;
         return false;
     }
-    
     for (size_t i = 0; i < st.m_mesh.nt(); i++)
     {
         if (st.m_mesh.get_triangle(i)[0] == st.m_mesh.get_triangle(i)[1])
@@ -231,8 +223,6 @@ bool MeshIO::load(HGF & hgf, const std::string & filename, bool binary)
             LosTopos::Vec3d x;
             is >> x[0] >> x[1] >> x[2];
             pos[i] = x;
-            
-            //TODO: Insert here code to load velocities.
         }
         
         st.m_masses.resize(n);
@@ -269,11 +259,6 @@ bool MeshIO::load(HGF & hgf, const std::string & filename, bool binary)
         
         st.set_all_positions(pos);
         st.set_all_newpositions(pos);
-
-        //TODO: Insert here store velocities to hgf.m_v.
-//        for (size_t i = 0; i < vs.mesh().nv(); i++)
-//            vs.vel(i)=velocities[i];
-                
         bool good = is.good();
         
         is >> n;
@@ -405,7 +390,7 @@ namespace
     
 }
 
-bool MeshIO::saveOBJ(HGF & hgf, const std::string & filename,const bool with_imaginary_vertices, const bool with_normal,const bool change_y_z)
+bool MeshIO::saveOBJ(SZHSolver & hgf, const std::string & filename,const bool with_imaginary_vertices, const bool with_normal,const bool change_y_z)
 {
     std::cout << "Saving mesh to " << filename << "... ";
 

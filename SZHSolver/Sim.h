@@ -10,7 +10,7 @@
 
 #include <iostream>
 #include <string>
-#include "HGF.h"
+#include "SZHSolver.h"
 #include "PRRenderer.h"
 #include "Scenes.h"
 
@@ -21,7 +21,7 @@ public:
     Sim(bool verbose);
     ~Sim();
     
-    HGF * get_hgf() { return hgf; }
+    SZHSolver * get_hgf() { return hgf; }
     
 public:
     bool init(const std::string & option_file, bool save_outputs, bool wo_visualization,const std::string env_map_path="",const std::string inputdata_dir="");
@@ -58,7 +58,7 @@ public:
     std::string m_output_directory;
     std::string m_load_directory;
     
-    HGF * hgf;
+    SZHSolver * hgf;
     double m_dt;
     double m_time;
     int m_frameid;

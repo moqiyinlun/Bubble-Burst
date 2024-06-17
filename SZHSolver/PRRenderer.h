@@ -10,7 +10,7 @@
 #define __MultiTracker__PRRenderer__
 
 #include <iostream>
-#include "HGF.h"
+#include "SZHSolver.h"
 #include <fstream>
 #include <sstream>
 #ifdef __APPLE__
@@ -27,7 +27,7 @@
 class PRRenderer
 {
 public:
-    PRRenderer(HGF * hgf,const std::string env_map_path="");
+    PRRenderer(SZHSolver * hgf,const std::string env_map_path="");
     std::string env_map_path;
     
 public:
@@ -40,7 +40,7 @@ protected:
     bool load_cube_map_side(GLuint tex, GLenum side, const std::string & filename);
     
 protected:
-    HGF * hgf;
+    SZHSolver * hgf;
     Shader m_shader_bubble;
     Shader m_shader_env;
     GLuint m_tex_env;
