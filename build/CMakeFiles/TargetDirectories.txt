@@ -1,8 +1,0 @@
-/data/new_disk4/shenzhh/CSE_PJ/Bubble-Burst/build/CMakeFiles/edit_cache.dir
-/data/new_disk4/shenzhh/CSE_PJ/Bubble-Burst/build/CMakeFiles/rebuild_cache.dir
-/data/new_disk4/shenzhh/CSE_PJ/Bubble-Burst/build/LosTopos/CMakeFiles/LosTopos.dir
-/data/new_disk4/shenzhh/CSE_PJ/Bubble-Burst/build/LosTopos/CMakeFiles/edit_cache.dir
-/data/new_disk4/shenzhh/CSE_PJ/Bubble-Burst/build/LosTopos/CMakeFiles/rebuild_cache.dir
-/data/new_disk4/shenzhh/CSE_PJ/Bubble-Burst/build/HGF/CMakeFiles/HGF.dir
-/data/new_disk4/shenzhh/CSE_PJ/Bubble-Burst/build/HGF/CMakeFiles/edit_cache.dir
-/data/new_disk4/shenzhh/CSE_PJ/Bubble-Burst/build/HGF/CMakeFiles/rebuild_cache.dir
