@@ -20,23 +20,6 @@ bool createDirectory(const std::string& path) {
 }
 
 
-void StartSimulate()
-{
-    g_sim.step();
-    std::stringstream ss;
-    ss << "Simulation_Result/mesh_" << g_sim.step_number << ".obj";
-    std::string meshname = ss.str();
-    ss.str("");
-    ss << "Simulation_Result/label_" << g_sim.step_number << ".txt";
-    std::string labelname = ss.str();
-    ss.str("");
-    g_sim.get_hgf()->saveResult(false, meshname, labelname);
-    if (g_sim.isFinished()){
-        g_sim.get_hgf()->saveResult(false, meshname, labelname);
-        exit(0);
-    }
-    
-}
 void parse_arguments(int argc, char **argv,std::string*inputdata_dir,int* duration,std::string* output_dir){
     
     using std::cout;
@@ -80,10 +63,10 @@ int main(int argc, char * argv[])
     bool success = g_sim.init(argv[1],inputdata_dir);
     std::cout << "Initialization complete. Starting the simulation..." << std::endl;
     std::stringstream ss;
-    ss <<output_dir<< "mesh_" << g_sim.step_number << ".obj";
+    ss <<output_dir<< "/mesh_" << g_sim.step_number << ".obj";
     std::string meshname = ss.str();
     ss.str("");
-    ss << output_dir<< "label_" << g_sim.step_number << ".txt";
+    ss << output_dir<< "/label_" << g_sim.step_number << ".txt";
     std::string labelname = ss.str();
     ss.str("");
     g_sim.get_hgf()->saveResult(false, meshname, labelname);
@@ -91,10 +74,10 @@ int main(int argc, char * argv[])
     for(int i = 0;i <duration_time; i++){
         g_sim.step();
         std::stringstream ss;
-        ss << "Simulation_Result/mesh_" << g_sim.step_number << ".obj";
+        ss <<output_dir<< "/mesh_" << g_sim.step_number << ".obj";
         std::string meshname = ss.str();
         ss.str("");
-        ss << "Simulation_Result/label_" << g_sim.step_number << ".txt";
+        ss << output_dir<< "/label_" << g_sim.step_number << ".txt";
         std::string labelname = ss.str();
         ss.str("");
         g_sim.get_hgf()->saveResult(false, meshname, labelname);

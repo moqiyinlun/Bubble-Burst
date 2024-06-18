@@ -69,6 +69,7 @@
         "typeindex": "cpp",
         "sparsecore": "cpp",
         "*.isph": "cpp",
-        "cassert": "cpp"
+        "cassert": "cpp",
+        "codecvt": "cpp"
     }
 }
